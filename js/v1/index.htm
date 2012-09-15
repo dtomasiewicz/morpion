@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en-ca">
+<head>
+	<title>Morpion Solitaire</title>
+	<link rel="stylesheet" href="morpion.css">
+	<script type="text/javascript" src="morpion.js"></script>
+	<script type="text/javascript">
+	window.onload = function() {
+		document.body.removeChild(document.getElementById('preload'));
+		game = new Morpion(document.getElementById('morpion'));
+		game.start('5T');
+		game.print();
+	}
+	</script>
+</head>
+<body>
+<h1>Morpion Solitaire</h1>
+<p>The game is simple-- create lines of 5 Xs (or 4 in the 4T variant) and connect them. Lines can intersect and join at the ends, but cannot overlap. You can only draw one line for each X you play, so choose wisely. The game is over when you can no longer place any more Xs. In the 5D and 4D variants, the rules are the same except lines in the same direction cannot join at their endpoints.</p>
+
+<div id="controls"><button onclick="if(confirm('Are you sure you want to restart?')) { game.start(document.getElementById('variant').value); game.print(); }">Restart</button> <label>Variant: <select id="variant" onchange="if(confirm('Do you wish to restart the game?')) { game.start(this.value); game.print(); }"><option value="5T" selected="selected">5T</option><option value="5D">5D</option><option value="4T">4T</option><option value="4D">4D</option></select></label> <label><input type="checkbox" onclick="game.toggleValidLines(this.checked)"> show valid lines</label> <label><input type="checkbox" onclick="game.toggleGridlines(this.checked)" checked="checked"> show grid lines</label> <label><input type="checkbox" onclick="game.toggleShowNumber(this.checked); game.print()"> show move numbers</label> <button onclick="importField = document.getElementById('import'); importField.value=game.exportGame(); importField.select(); alert('To save this game for later, copy the text in the box next to the Export button and save it to a text file. When you wish to restore the game, paste the text back into the box and click Import.')">Export</button> <input id="import" type="text"> <button onclick="if(confirm('This will restart the game, is that okay?')) game.importGame(document.getElementById('import').value)">Import</button> </div>
+<div id="morpion"></div>
+
+<div id="preload">
+Loading...
+<div>
+<img src="images/line-vertical.png">
+<img src="images/line-horizontal.png">
+<img src="images/line-diagonal.png">
+<img src="images/line-antidiagonal.png">
+<img src="images/line-0-1.png">
+<img src="images/line-1-1.png">
+<img src="images/line-1-0.png">
+<img src="images/line-1--1.png">
+<img src="images/line-0--1.png">
+<img src="images/line--1--1.png">
+<img src="images/line--1-0.png">
+<img src="images/line--1-1.png">
+
+<img src="images/line-vertical-green.png">
+<img src="images/line-horizontal-green.png">
+<img src="images/line-diagonal-green.png">
+<img src="images/line-antidiagonal-green.png">
+<img src="images/line-0-1-green.png">
+<img src="images/line-1-1-green.png">
+<img src="images/line-1-0-green.png">
+<img src="images/line-1--1-green.png">
+<img src="images/line-0--1-green.png">
+<img src="images/line--1--1-green.png">
+<img src="images/line--1-0-green.png">
+<img src="images/line--1-1-green.png">
+
+<img src="images/line-vertical-red.png">
+<img src="images/line-horizontal-red.png">
+<img src="images/line-diagonal-red.png">
+<img src="images/line-antidiagonal-red.png">
+<img src="images/line-0-1-red.png">
+<img src="images/line-1-1-red.png">
+<img src="images/line-1-0-red.png">
+<img src="images/line-1--1-red.png">
+<img src="images/line-0--1-red.png">
+<img src="images/line--1--1-red.png">
+<img src="images/line--1-0-red.png">
+<img src="images/line--1-1-red.png">
+
+<img src="images/line-vertical-blue.png">
+<img src="images/line-horizontal-blue.png">
+<img src="images/line-diagonal-blue.png">
+<img src="images/line-antidiagonal-blue.png">
+<img src="images/line-0-1-blue.png">
+<img src="images/line-1-1-blue.png">
+<img src="images/line-1-0-blue.png">
+<img src="images/line-1--1-blue.png">
+<img src="images/line-0--1-blue.png">
+<img src="images/line--1--1-blue.png">
+<img src="images/line--1-0-blue.png">
+<img src="images/line--1-1-blue.png">
+
+<img src="images/circle-blue.png">
+</div>
+</div>
+
+<div id="credit">Written by Daniel Tomasiewicz. Tested in <a href="http://www.mozilla.org/firefox">Firefox</a>, <a href="http://chrome.google.com">Chrome</a>, and Internet Explorer 8. For detailed instructions and a wealth of other information, see <a href="http://www.morpionsolitaire.com">MorpionSolitaire.com</a>. Got feedback? <a href="http://fourstaples.com/contact.php">Let me know</a>!</div>
+
+</body>
+</html>

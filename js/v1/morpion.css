@@ -1,0 +1,158 @@
+* { margin: 0; padding: 0 }
+* ol li {
+	list-style: decimal inside;
+}
+label {
+	cursor: pointer;
+}
+body {
+	padding-top: 60px;
+	font: 0.8em/1.35em verdana, sans-serif;
+}
+#credit {
+	font-size: 0.85em;
+	background: #ddd;
+	border-bottom: 1px solid #999;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	padding: 10px;
+}
+#preload div {
+	display: none;
+}
+h1, .grid, .morpion-score, .morpion-log, #controls, .morpion-coords, p, #preload {
+	margin: 0 20px 20px 20px;
+}
+#controls {
+	clear: both;
+}
+.grid {
+	float: left;
+	border: 1px solid #000;
+	clear: both;
+}
+.morpion-log {
+	width: 600px;
+	float: left;
+	height: 400px;
+	overflow: auto;
+	padding: 5px;
+}
+.morpion-coords, .morpion-score {
+	float: left;
+}
+.grid, .grid .grid-cell {
+	/*border: 1px solid #000;*/
+}
+.grid .grid-cell {
+	font-size: 1em;
+	position: relative;
+	float: left;
+	display: block;
+	width: 25px;
+	height: 25px;
+	text-align: center;
+	line-height: 25px;
+	color: #000;
+	font-weight: bold;
+	background: url('images/background.png') center center;
+}
+.grid .grid-cell span {
+	z-index: 5;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+.grid-empty {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+.grid-empty:hover:after {
+	content: 'X';
+}
+.grid-line {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-position: center center;
+}
+.clear {
+	clear: both;
+}
+
+.grid-line-valid {
+	opacity: .25;
+}
+
+.nogridlines .grid-cell {
+	background-image: none;
+}
+.moveNum {
+	background: url('images/circle-blue.png') center center no-repeat;
+	font-size: 0.8em;
+	font-weight: normal;
+	z-index: 6;
+}
+.grid-defaultPoint {
+	color: #900;
+}
+
+.grid-line-vertical.grid-line-normal { background-image: url('images/line-vertical-blue.png') }
+.grid-line-horizontal.grid-line-normal { background-image: url('images/line-horizontal-blue.png') }
+.grid-line-diagonal.grid-line-normal { background-image: url('images/line-diagonal-blue.png') }
+.grid-line-antidiagonal.grid-line-normal { background-image: url('images/line-antidiagonal-blue.png') }
+.grid-line-0-1.grid-line-normal { background-image: url('images/line-0-1-blue.png') }
+.grid-line-1-1.grid-line-normal { background-image: url('images/line-1-1-blue.png') }
+.grid-line-1-0.grid-line-normal { background-image: url('images/line-1-0-blue.png') }
+.grid-line-1--1.grid-line-normal { background-image: url('images/line-1--1-blue.png') }
+.grid-line-0--1.grid-line-normal { background-image: url('images/line-0--1-blue.png') }
+.grid-line--1--1.grid-line-normal { background-image: url('images/line--1--1-blue.png') }
+.grid-line--1-0.grid-line-normal { background-image: url('images/line--1-0-blue.png') }
+.grid-line--1-1.grid-line-normal { background-image: url('images/line--1-1-blue.png') }
+
+.grid-line-temp { z-index: 7 }
+.grid-line-vertical.grid-line-temp { background-image: url('images/line-vertical-red.png') }
+.grid-line-horizontal.grid-line-temp { background-image: url('images/line-horizontal-red.png') }
+.grid-line-diagonal.grid-line-temp { background-image: url('images/line-diagonal-red.png') }
+.grid-line-antidiagonal.grid-line-temp { background-image: url('images/line-antidiagonal-red.png') }
+.grid-line-0-1.grid-line-temp { background-image: url('images/line-0-1-red.png') }
+.grid-line-1-1.grid-line-temp { background-image: url('images/line-1-1-red.png') }
+.grid-line-1-0.grid-line-temp { background-image: url('images/line-1-0-red.png') }
+.grid-line-1--1.grid-line-temp { background-image: url('images/line-1--1-red.png') }
+.grid-line-0--1.grid-line-temp { background-image: url('images/line-0--1-red.png') }
+.grid-line--1--1.grid-line-temp { background-image: url('images/line--1--1-red.png') }
+.grid-line--1-0.grid-line-temp { background-image: url('images/line--1-0-red.png') }
+.grid-line--1-1.grid-line-temp { background-image: url('images/line--1-1-red.png') }
+
+.grid-line-vertical.grid-line-valid { background-image: url('images/line-vertical.png') }
+.grid-line-horizontal.grid-line-valid { background-image: url('images/line-horizontal.png') }
+.grid-line-diagonal.grid-line-valid { background-image: url('images/line-diagonal.png') }
+.grid-line-antidiagonal.grid-line-valid { background-image: url('images/line-antidiagonal.png') }
+.grid-line-0-1.grid-line-valid { background-image: url('images/line-0-1.png') }
+.grid-line-1-1.grid-line-valid { background-image: url('images/line-1-1.png') }
+.grid-line-1-0.grid-line-valid { background-image: url('images/line-1-0.png') }
+.grid-line-1--1.grid-line-valid { background-image: url('images/line-1--1.png') }
+.grid-line-0--1.grid-line-valid { background-image: url('images/line-0--1.png') }
+.grid-line--1--1.grid-line-valid { background-image: url('images/line--1--1.png') }
+.grid-line--1-0.grid-line-valid { background-image: url('images/line--1-0.png') }
+.grid-line--1-1.grid-line-valid { background-image: url('images/line--1-1.png') }
+
+.grid-line-vertical.grid-line-normal.grid-line-last { background-image: url('images/line-vertical-green.png') }
+.grid-line-horizontal.grid-line-normal.grid-line-last { background-image: url('images/line-horizontal-green.png') }
+.grid-line-diagonal.grid-line-normal.grid-line-last { background-image: url('images/line-diagonal-green.png') }
+.grid-line-antidiagonal.grid-line-last { background-image: url('images/line-antidiagonal-green.png') }
+.grid-line-0-1.grid-line-normal.grid-line-last { background-image: url('images/line-0-1-green.png') }
+.grid-line-1-1.grid-line-normal.grid-line-last { background-image: url('images/line-1-1-green.png') }
+.grid-line-1-0.grid-line-normal.grid-line-last { background-image: url('images/line-1-0-green.png') }
+.grid-line-1--1.grid-line-normal.grid-line-last { background-image: url('images/line-1--1-green.png') }
+.grid-line-0--1.grid-line-normal.grid-line-last { background-image: url('images/line-0--1-green.png') }
+.grid-line--1--1.grid-line-normal.grid-line-last { background-image: url('images/line--1--1-green.png') }
+.grid-line--1-0.grid-line-normal.grid-line-last { background-image: url('images/line--1-0-green.png') }
+.grid-line--1-1.grid-line-normal.grid-line-last { background-image: url('images/line--1-1-green.png') }
