@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Morpion v2</title>
+		<script src="morpion-compat.js"></script>
+		<script src="morpion.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+		<script src="morpion-web.js"></script>
+		<script>
+			$(function() {
+				loadRules('5t', function(rules) {
+					var g = createGame(rules);
+					var valid = g.validMoves();
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<h1>Morpion</h1>
+	</body>
+</html>

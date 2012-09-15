@@ -1,18 +1,9 @@
+require 'json'
 require_relative 'morpion'
 
-def new_5t_game
-  Morpion.new(4).mark_all([
-                            [3, 0], [4, 0], [5, 0], [6, 0],
-                            [3, 1],                 [6, 1],
-                            [3, 2],                 [6, 2],
-    [0, 3], [1, 3], [2, 3], [3, 3],                 [6, 3], [7, 3], [8, 3], [9, 3],
-    [0, 4],                                                                 [9, 4],
-    [0, 5],                                                                 [9, 5],
-    [0, 6], [1, 6], [2, 6], [3, 6],                 [6, 6], [7, 6], [8, 6], [9, 6],
-                            [3, 7],                 [6, 7],
-                            [3, 8],                 [6, 8],
-                            [3, 9], [4, 9], [5, 9], [6, 9]
-  ])
+def new_game(variant)
+  rules = JSON.parse File.read("games/#{variant}.json")
+  Morpion.new(rules['length'], rules['disjoint']).mark_all rules['marks']
 end
 
 # selects a random move
@@ -22,18 +13,18 @@ end
 
 # selects the move that leaves the most options available afterwards
 def select_promising(game)
-  max, moves = 0, []
+  max_score, max_moves = 0, []
   game.valid_moves.each do |move|
-    g = game.deep_copy
-    g.mark *move
+    game.mark *move
     n = g.valid_moves.length
-    if n > max
-      max, moves = n, [move]
-    elsif n == max
-      moves << move
+    if n > max_score
+      max_score, max_moves = n, [move]
+    elsif n == max_score
+      max_moves << move
     end
+    game.unmark *move
   end
-  moves.sample
+  max_moves.sample
 end
 
 # for each move, plays out random games and selects the move that produces
@@ -42,12 +33,14 @@ def select_performant(game, trials = 10)
   max_avg, max_move = 0, nil
   game.valid_moves.each do |move|
     scores = trials.times.map do
-      g, n = game.deep_copy, 0
-      g.mark *move
-      while m = select_naive(g)
-        g.mark *m
+      game.mark *move
+      n, moves = 0, [move]
+      while m = select_naive(game)
+        game.mark *m
         n += 1
+        moves << m
       end
+      game.unmark *moves.pop while moves.any?
       n
     end
     avg = scores.inject(:+).fdiv trials
@@ -59,50 +52,52 @@ def select_performant(game, trials = 10)
   max_move
 end
 
-=begin
 record = 0
 loop do
   
-  g = new_5t_game
+  g = new_game '5t'
   moves = []
   while move = select_performant(g, 2)
-    puts "move"
+    print "."
     g.mark *move
     moves << move
   end
+  print "\n"
 
   n = moves.length
+  puts "== #{n} =="
   if n > record
     record = n
     sig = moves.map do |x, y, (lx, ly, dx, dy)|
       "#{x},#{y}@#{lx},#{ly}[#{dx},#{dy}]"
     end.join ';'
-    puts "== #{record} ==\n#{sig}"
+    print "#{sig}\n\n"
   end
 
 end
-=end
 
 # each iteration, selects a promising move based on the score of a
 # random game and adds it to the list.
+=begin
 best = []
 loop do
-  game = new_5t_game
+  game = new_game '5t'
   best.each{|m| game.mark *m}
   
   max_score, max_move = 0, nil
   game.valid_moves.each do |move|
-    g = game.deep_copy
-    g.mark *move
-    score = best.length + 1
-    while r = select_naive(g)
-      g.mark *r
+    game.mark *move
+    score, moves = best.length+1, [move]
+    while r = select_naive(game)
+      game.mark *r
       score += 1
+      moves << r
     end
     if score > max_score
       max_score = score
       max_move = move
     end
+    game.unmark *moves.pop while moves.any?
   end
 
   if max_move
@@ -117,3 +112,4 @@ sig = best.map do |x, y, (lx, ly, dx, dy)|
   "#{x},#{y}@#{lx},#{ly}[#{dx},#{dy}]"
 end.join ';'
 puts "== #{best.length} ==\n#{sig}"
+=end

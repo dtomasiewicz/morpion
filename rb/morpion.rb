@@ -11,26 +11,31 @@ class Morpion
     @l, @d = line_length, disjoint
     @data = {}
     @bound = Set.new
-    @x_min = @x_max = @y_min = @y_max = 0
   end
 
   def mark(x, y, line = nil)
     @data[[x, y]] = {} # nil until played
 
-    @x_min = x if x < @x_min
-    @x_max = x if x > @x_max
-    @y_min = y if y < @y_min
-    @y_max = y if y > @y_max
-
     # extends the boundary to all open points around the mark
     @bound.delete [x, y]
-    [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
-      @bound << [bx, by] unless @data[[bx, by]]
-    end
+    draw_bound x, y
 
-    write_line *line if line
+    draw_line *line if line
 
     self
+  end
+
+  def unmark(x, y, line)
+    clear_line *line
+    @data.delete [x, y]
+    clear_bound x, y
+    
+    # compensate for lost boundaries from other marks
+    (x-2..x+2).each do |bx|
+      (y-2..y+2).each do |by|
+        draw_bound bx, by if @data[[bx, by]]
+      end
+    end
   end
 
   # same as mark, but raises an error on an invalid move
@@ -53,6 +58,71 @@ class Morpion
     end
   end
 
+  def to_s(bound = false)
+    b = bound ? 1 : 0
+    (y_min-b..y_max+b).map do |y|
+      (x_min-b..x_max+b).map do |x|
+        if @data[[x, y]]
+          'X'
+        elsif bound && @bound.include?([x, y])
+          '-'
+        else
+          ' '
+        end
+      end.join ''
+    end.join "\n"
+  end
+
+  def x_min
+    @data.keys.map(&:first).min
+  end
+
+  def x_max
+    @data.keys.map(&:first).max
+  end
+
+  def y_min
+    @data.keys.map(&:last).min
+  end
+
+  def y_max
+    @data.keys.map(&:last).max
+  end
+
+  def id
+    @data.hash
+  end
+
+  private
+
+  def draw_bound(x, y)
+    [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
+      @bound << [bx, by] unless @data[[bx, by]]
+    end
+  end
+
+  def clear_bound(x, y)
+    [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
+      @bound.delete [bx, by]
+    end
+  end
+
+  def draw_line(x, y, dx, dy)
+    (0..@l).each do |i|
+      xi, yi = x+i*dx, y+i*dy
+      @data[[xi, yi]][[dx, dy]] ||= Set.new
+      @data[[xi, yi]][[dx, dy]] << [x, y]
+    end
+  end
+
+  def clear_line(x, y, dx, dy)
+    (0..@l).each do |i|
+      xi, yi = x+i*dx, y+i*dy
+      @data[[xi, yi]][[dx, dy]].delete [x, y]
+      @data[[xi, yi]].delete [dx, dy] if @data[[xi, yi]][[dx, dy]].empty?
+    end
+  end
+
   # returns possible lines for a move made at _open_ spot x,y
   def lines(x, y)
     lines = []
@@ -61,7 +131,7 @@ class Morpion
       dx, dy = d
 
       # count marks ahead of, and behind, the current point
-      ahead, behind = [1, -1].map do |dir|
+      behind, ahead = [-1, 1].map do |dir|
         adj = 0
         continuous = true
         (1..@l+@d).each do |i|
@@ -85,36 +155,6 @@ class Morpion
     end
 
     lines
-  end
-
-  def to_s(bound = false)
-    b = bound ? 1 : 0
-    (@y_min-b..@y_max+b).map do |y|
-      (@x_min-b..@x_max+b).map do |x|
-        if @data[[x, y]]
-          'X'
-        elsif bound && @bound.include?([x, y])
-          '-'
-        else
-          ' '
-        end
-      end.join ''
-    end.join "\n"
-  end
-
-  # todo: something more efficient?
-  def deep_copy
-    Marshal.load Marshal.dump(self)
-  end
-
-  private
-
-  def write_line(x, y, dx, dy)
-    (0..@l).each do |i|
-      xi, yi = x+i*dx, y+i*dy
-      @data[[xi, yi]][[dx, dy]] ||= Set.new
-      @data[[xi, yi]][[dx, dy]] << [x, y]
-    end
   end
 
 end
