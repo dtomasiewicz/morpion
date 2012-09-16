@@ -1,6 +1,6 @@
 {
     "length": 4,
-    "disjoint": 1,
+    "disjoint": 0,
     "marks": [
                                 [3, 0], [4, 0], [5, 0], [6, 0],
                                 [3, 1],                 [6, 1],
@@ -12,5 +12,7 @@
                                 [3, 7],                 [6, 7],
                                 [3, 8],                 [6, 8],
                                 [3, 9], [4, 9], [5, 9], [6, 9]
-    ]
+    ],
+    "desc": "This is the most popular variant of Morpion Solitaire. The current record is 178, set by Christopher Rosin in August 2011.",
+    "link": "http://morpionsolitaire.com/English/RecordsGrids5T.htm"
 }

@@ -146,7 +146,7 @@ class Morpion
             continuous = false
           end
         end
-        adj
+        [@l, adj].min
       end
 
       (-behind..ahead-@l).each do |i|

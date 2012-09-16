@@ -55,7 +55,7 @@ end
 record = 0
 loop do
   
-  g = new_game '5t'
+  g = new_game '5T'
   moves = []
   while move = select_performant(g, 2)
     print "."

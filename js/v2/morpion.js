@@ -20,10 +20,10 @@ Morpion.prototype = {
     this.data[[x, y]] = {};
 
     delete this.bound[[x, y]];
-    this.drawBound(x, y);
+    this._drawBound(x, y);
 
     if(line) {
-      this.drawLine.apply(this, line);
+      this._drawLine.apply(this, line);
     }
 
     return this;
@@ -31,19 +31,19 @@ Morpion.prototype = {
 
   unmark: function(x, y, line) {
     // first: clear line
-    this.clearLine.apply(this, line);
+    this._clearLine.apply(this, line);
 
     // remove mark
     delete this.data[[x, y]];
 
     // correct bound
-    this.clearBound(x, y);
+    this._clearBound(x, y);
 
     // compensate for lost boundaries from other marks
     for(var bx = x-2; bx <= x+2; bx++) {
       for(var by = y-2; by <= y+2; by++) {
         if([bx, by] in this.data) {
-          this.drawBound(bx, by);
+          this._drawBound(bx, by);
         }
       }
     }
@@ -103,7 +103,7 @@ Morpion.prototype = {
           }
         }
 
-        return nAdj;
+        return Math.min(game.len, nAdj);
       });
 
       for(var i = -adj[0]; i <= adj[1]-game.len; i++) {
@@ -114,7 +114,11 @@ Morpion.prototype = {
     return lines;
   },
 
-  drawBound: function(x, y) {
+  isPlayed: function(x, y) {
+    return [x, y] in this.data;
+  },
+
+  _drawBound: function(x, y) {
     for(var bx = x-1; bx <= x+1; bx++) {
       for(var by = y-1; by <= y+1; by++) {
         if(!([bx, by] in this.data)) {
@@ -124,7 +128,7 @@ Morpion.prototype = {
     }
   },
 
-  clearBound: function(x, y) {
+  _clearBound: function(x, y) {
     for(var bx = x-1; bx <= x+1; bx++) {
       for(var by = y-1; by <= y+1; by++) {
         delete this.bound[[bx, by]];
@@ -132,7 +136,7 @@ Morpion.prototype = {
     }
   },
 
-  drawLine: function(x, y, dx, dy) {
+  _drawLine: function(x, y, dx, dy) {
     for(var i = 0; i <= this.len; i++) {
       var xi = x+i*dx, yi = y+i*dy;
       if(!([dx, dy] in this.data[[xi, yi]])) {
@@ -143,7 +147,7 @@ Morpion.prototype = {
   },
 
   // clears the most recently added line (not any arbitrary line!)
-  clearLine: function(x, y, dx, dy) {
+  _clearLine: function(x, y, dx, dy) {
     for(var i = 0; i <= this.len; i++) {
       var xi = x+i*dx, yi = y+i*dy;
       var lines = this.data[[xi, yi]][[dx, dy]];

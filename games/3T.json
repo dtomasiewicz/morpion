@@ -1,0 +1,11 @@
+{
+    "length": 2,
+    "disjoint": 0,
+    "marks": [
+                [1, 0],
+        [0, 1], [1, 1], [2, 1],
+                [1, 2]
+    ],
+    "desc": "While it is easy to obtain an infinite score with this setup, the real challenge lies in finding a finite score. So far, no one has found one!",
+    "link": "http://morpionsolitaire.com/English/Variants.htm#Finite3D3T"
+}

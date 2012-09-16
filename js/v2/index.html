@@ -2,20 +2,80 @@
 <html>
 	<head>
 		<title>Morpion v2</title>
+		<link rel="stylesheet" href="morpion.css">
 		<script src="morpion-compat.js"></script>
 		<script src="morpion.js"></script>
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
 		<script src="morpion-web.js"></script>
-		<script>
-			$(function() {
-				loadRules('5t', function(rules) {
-					var g = createGame(rules);
-					var valid = g.validMoves();
-				});
-			});
-		</script>
 	</head>
 	<body>
-		<h1>Morpion</h1>
+		<h1>Morpion Solitaire</h1>
+
+		<p>The game is simple-- create lines of adjacent <strong>X</strong>s, the number of which is determined by the variant. Lines can intersect and join at the ends, but cannot overlap. You can only draw one line for each <strong>X</strong> you play, so choose wisely. The game is over when you can no longer place any more <strong>X</strong>s. In the <strong>D</strong> variants, the rules are the same except lines running in the same direction cannot join at their endpoints.</p>
+
+		<!-- 
+		<p>
+			<label><input class="option" name="showGrid" type="checkbox" checked="checked"> show grid lines</label>
+			<label><input class="option" name="showNumbers" type="checkbox"> show move numbers</label>
+			<button id="export">Export</button> 
+			<input id="import_data" type="text"> 
+			<button id="import">Import</button>
+		</p>
+		-->
+
+		<div id="morpion"></div>
+
+		<div id="stats">
+			<dl>
+				<dt>Score</dt>
+				<dd id="score"></dd>
+				<dt>Options</dt>
+				<dd>
+					<button id="undo">Undo</button> 
+					<label><input class="option" name="showValid" type="checkbox"> show valid lines</label> 
+				    <button id="restart">Restart</button> 
+				</dd>
+				<dt>Status</dt>
+				<dd id="status"></dd>
+			</dl>
+			<h2 style="margin-top: 30px">Variant: 
+				<select id="variant">
+					<option value="5T">5T</option>
+					<option value="5D">5D</option>
+					<option value="4T">4T</option>
+					<option value="4D">4D</option>
+					<option value="3T">3T</option>
+					<option value="3D">3D</option>
+				</select>
+			</h2>
+			<div id="info"></div>
+		</div>
+
+		<div style="clear: both"></div>
+
+		<p id="credit">Written by Daniel Tomasiewicz. Tested in <a href="http://www.mozilla.org/firefox">Firefox</a>, <a href="http://chrome.google.com">Chrome</a>, and Internet Explorer 8. For detailed instructions and a wealth of other information, see <a href="http://www.morpionsolitaire.com">MorpionSolitaire.com</a>.</p>
+
+		<h2>TODO</h2>
+		<ul>
+			<li>grid lines</li>
+			<li>move numbers</li>
+			<li>import/export
+				<ul>
+					<li>compatibility with Pentasol format</li>
+				</ul>
+			</li>
+			<li>presets (noteworthy games)</li>
+			<li>custom configurations
+				<ul>
+					<li>distant future: submissions and highscores?</li>
+				</ul>
+			</li>
+			<li>testing
+				<ul>
+					<li>Firefox</li>
+					<li>Internet Explorer</li>
+				</ul>
+			</li>
+		</ul>
 	</body>
 </html>

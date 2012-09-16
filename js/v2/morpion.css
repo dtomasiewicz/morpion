@@ -1,0 +1,64 @@
+* { margin: 0; padding: 0 }
+* ol li {
+	list-style: decimal inside;
+}
+label {
+	cursor: pointer;
+}
+body {
+	padding: 45px 15px 15px 15px;
+	font: 0.8em/1.35em verdana, sans-serif;
+}
+h1, h2, p, #morpion, #stats {
+	margin: 15px 0;
+}
+ul {
+	margin: 15px 35px;
+}
+ul li {
+	margin: 5px 0;
+}
+ul ul {
+	margin: 0 25px;
+}
+button, input[type=text] {
+	padding: 3px;
+}
+button, input {
+	vertical-align: middle;
+}
+#credit {
+	font-size: 0.85em;
+	background: #ddd;
+	border-bottom: 1px solid #999;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	padding: 10px;
+	margin: 0;
+}
+#morpion canvas {
+	border: 1px solid #000;
+	cursor: crosshair;
+}
+#morpion {
+	float: left;
+}
+#stats {
+	float: left;
+	padding: 15px;
+	width: 400px;
+}
+#stats dl dt {
+	font-weight: bold;
+	text-transform: uppercase;
+	margin-bottom: 5px;
+}
+#stats dl dd {
+	margin-bottom: 25px;
+}
+#score {
+	font-size: 2em;
+	font-weight: bold;
+}

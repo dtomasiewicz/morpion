@@ -32,8 +32,8 @@ def select(game, limit)
   moves
 end
 
-game = new_game '3t'
-if solution = select(game, 8)
+game = new_game '3D'
+if solution = select(game, 5)
   sig = solution.map do |x, y, (lx, ly, dx, dy)|
     "#{x},#{y}@#{lx},#{ly}[#{dx},#{dy}]"
   end.join ';'
