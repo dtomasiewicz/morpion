@@ -16,9 +16,11 @@ Morpion.ORIENTATIONS = [
 Morpion.prototype = {
 
   mark: function(x, y, line) {
+    // add mark and remove it from the boundary
     this.data[[x, y]] = {};
-
     delete this.bound[[x, y]];
+
+    // add all non-marked surrounding points to boundary
     this._drawBound(x, y);
 
     if(line) {
@@ -30,22 +32,21 @@ Morpion.prototype = {
 
   unmark: function(x, y, line) {
     // first: clear line
-    this._clearLine.apply(this, line);
+    if(line) {
+      this._clearLine.apply(this, line);
+    }
 
     // remove mark
     delete this.data[[x, y]];
 
-    // correct bound
-    this._clearBound(x, y);
-
-    // compensate for lost boundaries from other marks
-    for(var bx = x-2; bx <= x+2; bx++) {
-      for(var by = y-2; by <= y+2; by++) {
-        if([bx, by] in this.data) {
-          this._drawBound(bx, by);
-        }
+    // correct boundary status of this and all surrounding points
+    for(var bx = x-1; bx <= x+1; bx++) {
+      for(var by = y-1; by <= y+1; by++) {
+        this._correctBound(bx, by);
       }
     }
+
+    return this;
   },
 
   markSafe: function(x, y, line) {
@@ -121,18 +122,26 @@ Morpion.prototype = {
   _drawBound: function(x, y) {
     for(var bx = x-1; bx <= x+1; bx++) {
       for(var by = y-1; by <= y+1; by++) {
-        if(!([bx, by] in this.data)) {
+        if(bx == 0 && by == 0) {
+          continue;
+        } else if(!([bx, by] in this.data)) {
           this.bound[[bx, by]] = [bx, by];
         }
       }
     }
   },
 
-  _clearBound: function(x, y) {
+  _correctBound: function(x, y) {
     for(var bx = x-1; bx <= x+1; bx++) {
       for(var by = y-1; by <= y+1; by++) {
-        delete this.bound[[bx, by]];
+        if(bx == 0 && by == 0) {
+          continue;
+        } else if([bx, by] in this.data) {
+          this.bound[[x, y]] = [x, y];
+          return;
+        }
       }
+      delete this.bound[[x, y]];
     }
   },
 

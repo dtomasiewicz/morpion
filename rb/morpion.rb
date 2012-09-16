@@ -14,10 +14,11 @@ class Morpion
   end
 
   def mark(x, y, line = nil)
-    @data[[x, y]] = {} # nil until played
+    # add mark and remove it from boundary
+    @data[[x, y]] = {}
+    @bound.delete [x, y]
 
     # extends the boundary to all open points around the mark
-    @bound.delete [x, y]
     draw_bound x, y
 
     draw_line *line if line
@@ -26,16 +27,18 @@ class Morpion
   end
 
   def unmark(x, y, line)
-    clear_line *line
+    clear_line *line if line
+
+    # remove mark; don't assume it's now of the boundary!
+    # during initial placement, marks aren't always placed on the boundary
     @data.delete [x, y]
-    clear_bound x, y
     
-    # compensate for lost boundaries from other marks
-    (x-2..x+2).each do |bx|
-      (y-2..y+2).each do |by|
-        draw_bound bx, by if @data[[bx, by]]
-      end
+    # correct boundary status of this and all surrounding marks
+    [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
+      correct_bound bx, by
     end
+
+    self
   end
 
   # same as mark, but raises an error on an invalid move
@@ -56,6 +59,39 @@ class Morpion
     @bound.inject([]) do |moves, (bx, by)|
       moves.concat lines(bx, by).map{|line| [bx, by, line]}
     end
+  end
+
+  # returns possible lines for a move made at _open_ spot x,y
+  def lines(x, y)
+    lines = []
+
+    [H, V, D, A].each do |d|
+      dx, dy = d
+
+      # count marks ahead of, and behind, the current point
+      behind, ahead = [-1, 1].map do |dir|
+        adj = 0
+        continuous = true
+        (1..@l+@d).each do |i|
+          if p = @data[[x+i*dx*dir, y+i*dy*dir]]
+            adj += 1 if continuous
+            if p[d]
+              adj = [i-@d, adj].min
+              break
+            end
+          else
+            continuous = false
+          end
+        end
+        [@l, adj].min
+      end
+
+      (-behind..ahead-@l).each do |i|
+        lines << [x+i*dx, y+i*dy, dx, dy]
+      end
+    end
+
+    lines
   end
 
   def to_s(bound = false)
@@ -97,14 +133,20 @@ class Morpion
 
   def draw_bound(x, y)
     [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
+      next if bx == 0 && by == 0
       @bound << [bx, by] unless @data[[bx, by]]
     end
   end
 
-  def clear_bound(x, y)
+  def correct_bound(x, y)
     [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
-      @bound.delete [bx, by]
+      next if bx == 0 && by == 0
+      if @data[[bx, by]]
+        @bound << [x, y]
+        return
+      end
     end
+    @bound.delete [x, y]
   end
 
   def draw_line(x, y, dx, dy)
@@ -121,39 +163,6 @@ class Morpion
       @data[[xi, yi]][[dx, dy]].delete [x, y]
       @data[[xi, yi]].delete [dx, dy] if @data[[xi, yi]][[dx, dy]].empty?
     end
-  end
-
-  # returns possible lines for a move made at _open_ spot x,y
-  def lines(x, y)
-    lines = []
-
-    [H, V, D, A].each do |d|
-      dx, dy = d
-
-      # count marks ahead of, and behind, the current point
-      behind, ahead = [-1, 1].map do |dir|
-        adj = 0
-        continuous = true
-        (1..@l+@d).each do |i|
-          if p = @data[[x+i*dx*dir, y+i*dy*dir]]
-            adj += 1 if continuous
-            if p[d]
-              adj = [i-@d, adj].min
-              break
-            end
-          else
-            continuous = false
-          end
-        end
-        [@l, adj].min
-      end
-
-      (-behind..ahead-@l).each do |i|
-        lines << [x+i*dx, y+i*dy, dx, dy]
-      end
-    end
-
-    lines
   end
 
 end
