@@ -91,11 +91,12 @@ Morpion.prototype = {
         for(var i = 1; i <= game.len+game.dis; i++) {
           var p = [x+i*dx*dir, y+i*dy*dir];
           if(p in game.data) {
+            if(cont) {
+              nAdj++;
+            }
             if(d in game.data[p]) {
               nAdj = Math.min(i-game.dis, nAdj);
               break;
-            } else if(cont) {
-              nAdj++;
             }
           } else {
             cont = false;

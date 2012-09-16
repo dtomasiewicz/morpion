@@ -179,13 +179,9 @@ MWeb.prototype = {
     var w = b.xMax-b.xMin+1;
     var h = b.yMax-b.yMin+1;
 
-    console.log('w', w, 'h', h);
-
     var p = this.options.padding;
     var xPad = (w+p*2) < this.options.minWidth ? Math.ceil((this.options.minWidth-w)/2) : p;
     var yPad = (h+p*2) < this.options.minHeight ? Math.ceil((this.options.minHeight-h)/2) : p;
-
-    console.log('xPad', xPad, 'yPad', yPad);
 
     this.canvas.width = (w+xPad*2)*this.options.size;
     this.canvas.height = (h+yPad*2)*this.options.size;

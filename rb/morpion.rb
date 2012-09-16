@@ -136,11 +136,10 @@ class Morpion
         continuous = true
         (1..@l+@d).each do |i|
           if p = @data[[x+i*dx*dir, y+i*dy*dir]]
+            adj += 1 if continuous
             if p[d]
               adj = [i-@d, adj].min
               break
-            elsif continuous
-              adj += 1
             end
           else
             continuous = false
