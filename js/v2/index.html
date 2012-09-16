@@ -13,42 +13,63 @@
 
 		<p>The game is simple-- create lines of adjacent <strong>X</strong>s, the number of which is determined by the variant. Lines can intersect and join at the ends, but cannot overlap. You can only draw one line for each <strong>X</strong> you play, so choose wisely. The game is over when you can no longer place any more <strong>X</strong>s. In the <strong>D</strong> variants, the rules are the same except lines running in the same direction cannot join at their endpoints.</p>
 
-		<!-- 
-		<p>
-			<label><input class="option" name="showGrid" type="checkbox" checked="checked"> show grid lines</label>
-			<label><input class="option" name="showNumbers" type="checkbox"> show move numbers</label>
-			<button id="export">Export</button> 
-			<input id="import_data" type="text"> 
-			<button id="import">Import</button>
-		</p>
-		-->
-
 		<div id="morpion"></div>
 
 		<div id="stats">
-			<dl>
-				<dt>Score</dt>
-				<dd id="score"></dd>
-				<dt>Options</dt>
-				<dd>
-					<button id="undo">Undo</button> 
+			<div id="score">
+				<h3>Score</h3>
+				<p id="score_value"></p>
+			</div>
+			<div id="options_play">
+				<h3>Options</h3>
+				<p>
+					<button class="undo">Undo</button> 
 					<label><input class="option" name="showValid" type="checkbox"> show valid lines</label> 
-				    <button id="restart">Restart</button> 
-				</dd>
-				<dt>Status</dt>
-				<dd id="status"></dd>
-			</dl>
-			<h2 style="margin-top: 30px">Variant: 
-				<select id="variant">
-					<option value="5T">5T</option>
-					<option value="5D">5D</option>
-					<option value="4T">4T</option>
-					<option value="4D">4D</option>
-					<option value="3T">3T</option>
-					<option value="3D">3D</option>
-				</select>
-			</h2>
-			<div id="info"></div>
+				    <button class="restart">Restart</button>
+				</p>
+			</div>
+			<div id="options_design">
+				<h3>Options</h3>
+				<p>
+				    <button id="start" style="font-weight: bold">Start</button> 
+					<button class="undo">Undo</button> 
+				    <button class="restart">Clear</button>
+				</p>
+			</div>
+			<div id="status">
+				<h3>Status</h3>
+				<p id="status_value"></p>
+			</div>
+			<div id="variant">
+				<h2>Variant: 
+					<select id="variant_value">
+						<option value="5T">5T</option>
+						<option value="5D">5D</option>
+						<option value="4T">4T</option>
+						<option value="4D">4D</option>
+						<option value="3T">3T</option>
+						<option value="3D">3D</option>
+						<option value="custom">custom</option>
+					</select> 
+					<span id="custom_style">
+						<select id="length">
+							<option value="2">2</option>
+							<option value="3">3</option>
+							<option value="4">4</option>
+							<option value="5" selected="selected">5</option>
+							<option value="6">6</option>
+							<option value="7">7</option>
+							<option value="8">8</option>
+						</select> 
+						<select id="disjoint">
+							<option value="0" selected="selected">T</option>
+							<option value="1">D</option>
+							<option value="2">DD</option>
+						</select>
+					</span>
+				</h2>
+				<div id="variant_info"></div>
+			</div>
 		</div>
 
 		<div style="clear: both"></div>
@@ -57,19 +78,20 @@
 
 		<h2>TODO</h2>
 		<ul>
-			<li>grid lines</li>
-			<li>move numbers</li>
 			<li>import/export
 				<ul>
 					<li>compatibility with Pentasol format</li>
 				</ul>
 			</li>
-			<li>presets (noteworthy games)</li>
-			<li>custom configurations
+			<li>move numbers</li>
+			<li>presets (loadable interesting games)</li>
+			<li><del>custom configurations</del>
 				<ul>
 					<li>distant future: submissions and highscores?</li>
 				</ul>
 			</li>
+			<li>grid lines ?</li>
+			<li>Xs instead of circles ? (if staying with circles, should update blurb at top)</li>
 			<li>testing
 				<ul>
 					<li>Firefox</li>

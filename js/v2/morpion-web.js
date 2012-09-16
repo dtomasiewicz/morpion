@@ -2,10 +2,11 @@ var MWeb = function(target, options) {
   this.target = target;
 
   this.options = $.extend({
+    minWidth: 13,
+    minHeight: 13,
     score: null,
     status: null,
     showValid: false,
-    showGrid: true,
     showNumbers: false,
     size: 31,
     padding: 2,
@@ -17,9 +18,6 @@ var MWeb = function(target, options) {
       'Nice move, buddy.'
     ]
   }, options || {});
-
-  this.canvas = null;
-  this.game = null;
 };
 
 MWeb.prototype = {
@@ -34,26 +32,36 @@ MWeb.prototype = {
     }
   },
 
-  startGame: function(rules) {
-    if(typeof rules === 'object')
-      this.gameRules = rules;
-
+  init: function(rules) {
+    this.game = null;
     this.canvas = $('<canvas></canvas>').get(0);
     $(this.target).html(this.canvas);
     this.preview = this.linePreview = null;
     this.transX = this.transY = 0;
 
-    this.game = new Morpion(this.gameRules.length, this.gameRules.disjoint);
+    this.game = new Morpion();
     this.history = [];
-    if('marks' in this.gameRules) {
-      for(var i = 0; i < this.gameRules.marks.length; i++) {
-        this.play.apply(this, this.gameRules.marks[i]);
+    this.playing = false;
+
+    if(rules) {
+      this.game.len = rules.length;
+      this.game.dis = rules.disjoint;
+      if('marks' in rules) {
+        for(var i = 0; i < rules.marks.length; i++) {
+          this.play.apply(this, rules.marks[i]);
+        }
       }
+      this.start();
+    } else {
+      this._status('Place your marks!');
     }
 
     this._listen();
+  },
+
+  start: function() {
+    this.playing = true;
     this._status('Game started.');
-    this._redraw();
   },
 
   _listen: function() {
@@ -76,34 +84,43 @@ MWeb.prototype = {
         return;
       }
 
-      var lines = mweb.game.lines(c.x, c.y);
-      var played = false;
+      if(mweb.playing) {
+        var lines = mweb.game.lines(c.x, c.y);
+        var played = false;
 
-      if(lines.length == 0) {
-        mweb._status('Invalid move!');
-      } else if(lines.length == 1) {
-        mweb.play(c.x, c.y, lines[0]);
-        played = true;
-      } else {
-        for(var i = 0; i < lines.length; i++) {
-          mweb.linePreview = lines[i];
-          mweb._redraw();
-          if(confirm('Play this one?')) {
-            mweb.play(c.x, c.y, lines[i]);
-            played = true;
-            break;
+        if(lines.length == 0) {
+          mweb._status('Invalid move!');
+        } else if(lines.length == 1) {
+          mweb.play(c.x, c.y, lines[0]);
+          played = true;
+        } else {
+          for(var i = 0; i < lines.length; i++) {
+            mweb.linePreview = lines[i];
+            mweb._redraw();
+            if(confirm('Play this one?')) {
+              mweb.play(c.x, c.y, lines[i]);
+              played = true;
+              break;
+            }
           }
+          mweb.linePreview = null;
         }
-        mweb.linePreview = null;
-      }
 
-      if(played) {
-        var mi = Math.floor(Math.random()*mweb.options.messages.length);
-        mweb._status(mweb.options.messages[mi]);
+        if(played) {
+          var mi = Math.floor(Math.random()*mweb.options.messages.length);
+          mweb._status(mweb.options.messages[mi]);
+        }
+      } else {
+        mweb.play(c.x, c.y);
+        mweb._status('Mark placed.');
       }
 
       mweb._redraw();
     });
+  },
+
+  _listenDesign: function() {
+
   },
 
   _status: function(status) {
@@ -132,14 +149,25 @@ MWeb.prototype = {
   },
 
   undo: function() {
-    var mark = this.history.pop();
-    if(mark[2]) {
-      this.game.unmark.apply(this.game, mark);
-      this._status('Move undone!');
+    if(this.history.length > 0) {
+      var mark = this.history.pop();
+      if(!this.playing || mark[2]) {
+        this.game.unmark.apply(this.game, mark);
+        this._status('Move undone!');
+        return true;
+      } else {
+        this.history.push(mark);
+        this._status('Nothing to undo!');
+        return false;
+      }
     } else {
-      this.history.push(mark);
-      this._status('Nothing to undo!');
+      return false;
     }
+  },
+
+  restart: function() {
+    while(this.undo());
+    this._status('Game restarted.');
   },
 
   _redraw: function() {
@@ -148,16 +176,25 @@ MWeb.prototype = {
     var ctx = this.canvas.getContext('2d');
 
     var b = this._bounds();
-    this.canvas.width = (b.xMax-b.xMin+1+this.options.padding*2)*this.options.size;
-    this.canvas.height = (b.yMax-b.yMin+1+this.options.padding*2)*this.options.size;
+    var w = b.xMax-b.xMin+1;
+    var h = b.yMax-b.yMin+1;
+
+    console.log('w', w, 'h', h);
+
+    var p = this.options.padding;
+    var xPad = (w+p*2) < this.options.minWidth ? Math.ceil((this.options.minWidth-w)/2) : p;
+    var yPad = (h+p*2) < this.options.minHeight ? Math.ceil((this.options.minHeight-h)/2) : p;
+
+    console.log('xPad', xPad, 'yPad', yPad);
+
+    this.canvas.width = (w+xPad*2)*this.options.size;
+    this.canvas.height = (h+yPad*2)*this.options.size;
 
 
     // allows us to draw using actual coordinates
-    this.transX = (this.options.padding-b.xMin)*this.options.size;
-    this.transY = (this.options.padding-b.yMin)*this.options.size;
+    this.transX = (xPad-b.xMin)*this.options.size;
+    this.transY = (yPad-b.yMin)*this.options.size;
     ctx.translate(this.transX, this.transY);
-
-    // TODO draw grid lines
 
     if(this.options.showValid) {
       ctx.fillStyle = '#CCC';
@@ -224,15 +261,23 @@ MWeb.prototype = {
   },
 
   _bounds: function() {
-    var b = {xMin: 0, xMax: 0, yMin: 0, yMax: 0};
-    for(var i = 0; i < this.history.length; i++) {
-      var m = this.history[i];
-      if(m[0] < b.xMin) b.xMin = m[0];
-      if(m[0] > b.xMax) b.xMax = m[0];
-      if(m[1] < b.yMin) b.yMin = m[1];
-      if(m[1] > b.yMax) b.yMax = m[1];
+    if(this.history.length > 0) {
+      var b = null;
+      for(var i = 0; i < this.history.length; i++) {
+        var m = this.history[i];
+        if(b) {
+          if(m[0] < b.xMin) b.xMin = m[0];
+          if(m[0] > b.xMax) b.xMax = m[0];
+          if(m[1] < b.yMin) b.yMin = m[1];
+          if(m[1] > b.yMax) b.yMax = m[1];
+        } else {
+          b = {xMin: m[0], xMax: m[0], yMin: m[1], yMax: m[1]};
+        }
+      }
+      return b;
+    } else {
+      return {xMin: 0, xMax: 0, yMin: 0, yMax: 0}
     }
-    return b;
   },
 
   import: function(data) {
@@ -245,43 +290,60 @@ MWeb.prototype = {
 
 };
 
+function playUI() {
+  $('#options_play, #score').show();
+  $('#options_design').hide();
+}
+
+function designUI() {
+  $('#options_design').show();
+  $('#options_play, #score').hide();
+}
+
 $(function() {
   var ui = new MWeb($('#morpion').get(0), {
-    score: $('#score').get(0),
-    status: $('#status').get(0)
+    score: $('#score_value').get(0),
+    status: $('#status_value').get(0)
   });
   
   $('.option').change(function() {
     ui.option(this.name, this.checked);
   }).change();
 
-  $('#variant').change(function() {
+  $('#variant_value').change(function() {
     var variant = $(this).val();
+    var info = $('#variant_info');
+
     if(variant == "custom") {
-      // TODO
+      ui.init();
+      $('#custom_style').show();
+      designUI();
+
+      info.html("<p>This one's up to you! Place your starting marks where you want them, then click Start to begin playing.</p>");
     } else {
       $.getJSON('games/'+variant+'.json', function(rules) {
-        ui.startGame(rules);
-        $('#info').html('');
+        ui.init(rules);
+        $('#custom_style').hide();
+        playUI();
+
+        info.html('');
         if('desc' in rules) {
-          $('<p></p>').text(rules.desc).appendTo('#info');
+          $('<p></p>').text(rules.desc).appendTo(info);
         }
         if('link' in rules) {
           var link = $('<a target="_blank">More Information</a>').attr('href', rules.link);
-          $('<p></p>').append(link).appendTo('#info');
+          $('<p></p>').append(link).appendTo(info);
         }
       });
     }
   }).change();
 
-  $('#restart').click(function() {
-    ui.startGame();
+  $('.restart').click(function() {
+    ui.restart();
   });
 
-  $('#undo').click(function() {
-    if(ui.game) {
-      ui.undo();
-    }
+  $('.undo').click(function() {
+    ui.undo();
   });
 
   $('#import').click(function() {
@@ -290,5 +352,12 @@ $(function() {
 
   $('#export').click(function() {
     $('#import_data').val(ui.export());
+  });
+
+  $('#start').click(function() {
+    ui.game.len = parseInt($('#length').val());
+    ui.game.dis = parseInt($('#disjoint').val());
+    ui.start();
+    playUI();
   });
 });

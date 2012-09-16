@@ -24,7 +24,7 @@ ul ul {
 button, input[type=text] {
 	padding: 3px;
 }
-button, input {
+button, input, select {
 	vertical-align: middle;
 }
 #credit {
@@ -50,15 +50,15 @@ button, input {
 	padding: 15px;
 	width: 400px;
 }
-#stats dl dt {
+#stats h3 {
 	font-weight: bold;
 	text-transform: uppercase;
 	margin-bottom: 5px;
 }
-#stats dl dd {
+#stats div {
 	margin-bottom: 25px;
 }
-#score {
+#score_value {
 	font-size: 2em;
 	font-weight: bold;
 }

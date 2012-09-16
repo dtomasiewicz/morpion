@@ -1,5 +1,4 @@
 var Morpion = function(len, dis) {
-  if(typeof dis === 'undefined') dis = 0;
   this.len = len;
   this.dis = dis;
   this.data = {};
