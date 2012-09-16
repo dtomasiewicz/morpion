@@ -209,8 +209,7 @@ MWeb.prototype = {
       ctx.fillStyle = '#E9E9E9';
       xy = xy.split(',');
       this._drawMark.call(this, ctx, parseInt(xy[0]), parseInt(xy[1]));
-    }
-    */
+    }*/
 
     // draw preview
     if(this.preview) {

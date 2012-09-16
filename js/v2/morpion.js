@@ -122,7 +122,7 @@ Morpion.prototype = {
   _drawBound: function(x, y) {
     for(var bx = x-1; bx <= x+1; bx++) {
       for(var by = y-1; by <= y+1; by++) {
-        if(bx == 0 && by == 0) {
+        if(bx == x && by == y) {
           continue;
         } else if(!([bx, by] in this.data)) {
           this.bound[[bx, by]] = [bx, by];
@@ -132,17 +132,17 @@ Morpion.prototype = {
   },
 
   _correctBound: function(x, y) {
-    for(var bx = x-1; bx <= x+1; bx++) {
-      for(var by = y-1; by <= y+1; by++) {
-        if(bx == 0 && by == 0) {
-          continue;
-        } else if([bx, by] in this.data) {
-          this.bound[[x, y]] = [x, y];
-          return;
+    if(!([x, y] in this.data)) {
+      for(var bx = x-1; bx <= x+1; bx++) {
+        for(var by = y-1; by <= y+1; by++) {
+          if([bx, by] in this.data) {
+            this.bound[[x, y]] = [x, y];
+            return;
+          }
         }
       }
-      delete this.bound[[x, y]];
     }
+    delete this.bound[[x, y]];
   },
 
   _drawLine: function(x, y, dx, dy) {

@@ -22,7 +22,6 @@ def select(game, limit)
           moves = [m, *recurse]
         end
       else
-        #puts "memoizing bad game"
         BAD[game.id] = true
       end
     end

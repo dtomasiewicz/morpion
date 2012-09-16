@@ -33,7 +33,7 @@ class Morpion
     # during initial placement, marks aren't always placed on the boundary
     @data.delete [x, y]
     
-    # correct boundary status of this and all surrounding marks
+    # correct boundary status of this and all surrounding points
     [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
       correct_bound bx, by
     end
@@ -131,19 +131,23 @@ class Morpion
 
   private
 
+  # adds open points surrounding x,y to the boundary
   def draw_bound(x, y)
     [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
-      next if bx == 0 && by == 0
+      next if bx == x && by == y
       @bound << [bx, by] unless @data[[bx, by]]
     end
   end
 
+  # adds the given point to the boundary if it is open and adjacent to a mark
+  # otherwise, removes it from the boundary
   def correct_bound(x, y)
-    [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
-      next if bx == 0 && by == 0
-      if @data[[bx, by]]
-        @bound << [x, y]
-        return
+    unless @data[[x, y]]
+      [x-1,x,x+1].product([y-1,y,y+1]).each do |(bx, by)|
+        if @data[[bx, by]]
+          @bound << [x, y]
+          return
+        end
       end
     end
     @bound.delete [x, y]
