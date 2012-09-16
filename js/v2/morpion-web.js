@@ -208,6 +208,14 @@ MWeb.prototype = {
       }
     }
 
+    /* uncomment to show boundaries
+    for(var xy in this.game.bound) {
+      ctx.fillStyle = '#E9E9E9';
+      xy = xy.split(',');
+      this._drawMark.call(this, ctx, parseInt(xy[0]), parseInt(xy[1]));
+    }
+    */
+
     // draw preview
     if(this.preview) {
       ctx.fillStyle = '#f00';
@@ -215,7 +223,6 @@ MWeb.prototype = {
     }
 
     // draw existing marks
-    // TODO show move numbers
     var score = 0;
     for(var i = 0; i < this.history.length; i++) {
       var mark = this.history[i], line = mark[2];
