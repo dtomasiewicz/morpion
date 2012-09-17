@@ -314,7 +314,7 @@ MWeb.prototype = {
     var marks = data.map(function(m) {
       m = m.split(',').map(function(i) { return parseInt(i); });
       var mark = [m.shift(), m.shift()];
-      if(m[0]) mark.push(m);
+      if(m.length > 0) mark.push(m);
       return mark;
     });
     return {length: parseInt(meta[0]), disjoint: parseInt(meta[1]), marks: marks};
