@@ -11,7 +11,7 @@
 	<body>
 		<h1>Morpion Solitaire</h1>
 
-		<p>The game is simple-- create lines of adjacent <strong>X</strong>s, the number of which is determined by the variant. Lines can intersect and join at the ends, but cannot overlap. You can only draw one line for each <strong>X</strong> you play, so choose wisely. The game is over when you can no longer place any more <strong>X</strong>s. In the <strong>D</strong> variants, the rules are the same except lines running in the same direction cannot join at their endpoints.</p>
+		<p>The game is simple&mdash; create lines of adjacent circles, the number of which is determined by the selected variant. You may only draw one line for each circle you play, so choose wisely. In the <strong>T</strong> (touching) variants, lines can intersect and join at the ends, but cannot overlap; in <strong>D</strong> (disjointed) variants, lines may <em>not</em> join at the ends. The object of the game is to achieve the highest score possible before running out of moves.</p>
 
 		<div id="morpion"></div>
 
@@ -80,10 +80,11 @@
 
 		<div style="clear: both"></div>
 
-		<p id="credit">Written by Daniel Tomasiewicz. Tested in <a href="http://www.mozilla.org/firefox">Firefox</a>, <a href="http://chrome.google.com">Chrome</a>, and Internet Explorer 8. For detailed instructions and a wealth of other information, see <a href="http://www.morpionsolitaire.com">MorpionSolitaire.com</a>.</p>
+		<p id="credit">Written by Daniel Tomasiewicz. Tested in <a href="http://www.mozilla.org/firefox">Firefox</a>, <a href="http://chrome.google.com">Chrome</a>, and Internet Explorer 9. For detailed instructions and a wealth of other information, see <a href="http://www.morpionsolitaire.com">MorpionSolitaire.com</a>.</p>
 
 		<h2>TODO</h2>
 		<ul>
+			<li>better UI mechanism for selecting from multiple candidate lines</li>
 			<li>presets (loadable interesting games)</li>
 			<li><del>import/export</del>
 				<ul>
