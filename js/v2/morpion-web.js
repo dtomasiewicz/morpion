@@ -9,7 +9,7 @@ var MWeb = function(target, options) {
     showValid: false,
     showNumbers: false,
     size: 31,
-    padding: 2,
+    minPadding: 2,
     messages: [
       'Great job!',
       'Good one.',
@@ -27,16 +27,21 @@ MWeb._inputModes = {
   pointSelect: {
 
     mousemove: function(e) {
-      this._preview = this._point(e);
+      this._currentPoint = this._point(e);
       this._redraw();
     },
 
     mouseout: function(e) {
-      this._preview = null;
+      this._currentPoint = null;
       this._redraw();
     },
 
     mousedown: function(e) {
+      if(e.which != 1) {
+        this.undo();
+        return;
+      }
+
       var p = this._point(e);
 
       if(this.game.isPlayed(p.x, p.y)) {
@@ -118,7 +123,7 @@ MWeb.prototype = {
 
   init: function(rules) {
     this.canvas = $('<canvas></canvas>').get(0);
-    this.transX = this.transY = 0;
+    this._trans = {x: 0, y: 0};
     $(this.target).html(this.canvas);
 
     this.game = new Morpion();
@@ -153,31 +158,35 @@ MWeb.prototype = {
     this._status('Game started.');
   },
 
-  _setCurrentLine: function(mouse) {
+  _setCurrentLine: function(p) {
     var bestLine = bestMid = -1;
 
     for(var i = 0; i < this._lines.length; i++) {
       var lx = this._lines[i][0], ly = this._lines[i][1], dx = this._lines[i][2], dy = this._lines[i][3];
-      
-      var p1 = this._coords(lx, ly);
-      var p2 = this._coords(lx+this.game.len*dx, ly+this.game.len*dy);
-      var dy = p2.y-p1.y, dx = p2.x-p1.x;
 
-      // distance to line as primary determinant
-      // TODO this should be distance to line SEGMENT
-      var dLine;
-      if(dx == 0) {
-        // line is vertical
-        dLine = mouse.x-p1.x;
+      var v = this._page(lx, ly);
+      var w = this._page(lx+this.game.len*dx, ly+this.game.len*dy);
+
+      // distance to line segment is primary determinant
+      // thanks: http://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
+      var l2 = Math.pow(v.x-w.x, 2) + Math.pow(v.y-w.y, 2);
+      if(l2 == 0) {
+        dLine = Geo.distance(p, v);
       } else {
-        var m = (p2.y-p1.y)/(p2.x-p1.x);
-        dLine = p1.y-mouse.y+m*(mouse.x-p1.x);
+        var t = ((p.x-v.x)*(w.x-v.x) + (p.y- v.y)*(w.y-v.y)) / l2;
+        if(t < 0) {
+          dLine = Geo.distance(p, v);
+        } else if(t > 1) {
+          dLine = Geo.distance(p, w);
+        } else {
+          dLine = Geo.distance(p, {x: v.x + t*(w.x-v.x), y: v.y + t*(w.y-v.y)});
+        }
       }
-      dLine = Math.round(Math.abs(dLine));
+      dLine = Math.round(dLine);
 
       // distance to midpoint as secondary determinant
-      var mid = Geo.midpoint(p1, p2);
-      var dMid = Geo.distance(mouse, mid);
+      var mid = Geo.midpoint(v, w);
+      var dMid = Geo.distance(p, mid);
 
       if(bestLine == -1 || dLine < bestLine || (dLine == bestLine && dMid < bestMid)) {
         bestLine = dLine;
@@ -202,7 +211,6 @@ MWeb.prototype = {
   },
 
   _pointSelect: function() {
-    this._preview = null;
     this._input = MWeb._inputModes.pointSelect;
     this.canvas.style.cursor = 'crosshair';
   },
@@ -219,7 +227,7 @@ MWeb.prototype = {
     }
 
     this._input = MWeb._inputModes.lineSelect;
-    this.canvas.style.cursor = 'crosshair';
+    this.canvas.style.cursor = 'move';
     this._status('Select a line.');
   },
 
@@ -232,15 +240,15 @@ MWeb.prototype = {
 
   _point: function(event) {
     return {
-      x: Math.floor((event.pageX-$(this.canvas).offset().left-this.transX)/this.options.size),
-      y: Math.floor((event.pageY-$(this.canvas).offset().top-this.transY)/this.options.size)
+      x: Math.floor((event.pageX-$(this.canvas).offset().left-this._trans.x)/this.options.size),
+      y: Math.floor((event.pageY-$(this.canvas).offset().top-this._trans.y)/this.options.size)
     }
   },
 
-  _coords: function(x, y) {
+  _page: function(x, y) {
     return {
-      x: this.options.size*(x+.5)+this.transX+$(this.canvas).offset().left,
-      y: this.options.size*(y+.5)+this.transY+$(this.canvas).offset().top
+      x: this.options.size*(x+.5)+this._trans.x+$(this.canvas).offset().left,
+      y: this.options.size*(y+.5)+this._trans.y+$(this.canvas).offset().top
     };
   },
 
@@ -291,34 +299,28 @@ MWeb.prototype = {
     var w = b.xMax-b.xMin+1;
     var h = b.yMax-b.yMin+1;
 
-    var p = this.options.padding;
+    var p = this.options.minPadding;
     var xPad = (w+p*2) < this.options.minWidth ? Math.ceil((this.options.minWidth-w)/2) : p;
     var yPad = (h+p*2) < this.options.minHeight ? Math.ceil((this.options.minHeight-h)/2) : p;
 
     this.canvas.width = (w+xPad*2)*this.options.size;
     this.canvas.height = (h+yPad*2)*this.options.size;
 
-
     // allows us to draw using actual coordinates
-    this.transX = (xPad-b.xMin)*this.options.size;
-    this.transY = (yPad-b.yMin)*this.options.size;
-    ctx.translate(this.transX, this.transY);
+    this._trans = {
+      x: (xPad-b.xMin)*this.options.size,
+      y: (yPad-b.yMin)*this.options.size
+    };
+    ctx.translate(this._trans.x, this._trans.y);
 
     if(!this._lines && this.options.showValid) {
-      ctx.fillStyle = '#CCC';
-      ctx.strokeStyle = "#CCC";
-      ctx.lineWidth = 1;
-      var v = this.game.validMoves();
-      for(var i = 0; i < v.length; i++) {
-        this._drawMark(ctx, v[i]);
-        this._drawLine(ctx, v[i][2]);
-      }
+      this._drawValid(ctx);
     }
 
     // draw preview
-    if(this._preview) {
+    if(this._currentPoint) {
       ctx.fillStyle = '#f00';
-      this._drawMark(ctx, [this._preview.x, this._preview.y]);
+      this._drawMark(ctx, [this._currentPoint.x, this._currentPoint.y]);
     }
 
     // draw lines and initial marks
@@ -337,13 +339,34 @@ MWeb.prototype = {
       }
     }
 
-    // draw marks with(out) move numbers
+    this._drawMarkers(ctx);
+
+    if(this._lines) {
+      this._drawLines(ctx);
+    }
+
+    if(this.options.score) {
+      $(this.options.score).text(score);
+    }
+  },
+
+  _drawValid: function(ctx) {
+    ctx.fillStyle = '#CCC';
+    ctx.strokeStyle = "#CCC";
+    ctx.lineWidth = 1;
+    var v = this.game.validMoves();
+    for(var i = 0; i < v.length; i++) {
+      this._drawMark(ctx, v[i]);
+      this._drawLine(ctx, v[i][2]);
+    }
+  },
+
+  _drawMarkers: function(ctx) {
     var num = 1;
     for(var i = 0; i < this.history.length; i++) {
       var mark = this.history[i], showNum = null;
 
       if(mark[2]) {
-
         if(this.options.showNumbers) {
           showNum = num++;
           ctx.textAlign = 'center';
@@ -355,28 +378,24 @@ MWeb.prototype = {
         this._drawMark(ctx, mark, showNum);
       }
     }
+  },
 
-    if(this._lines) {
-      // white translucent overlay
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.fillRect(-this.transX, -this.transY, this.canvas.width, this.canvas.height);
+  _drawLines: function(ctx) {
+    // white translucent overlay
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillRect(-this._trans.x, -this._trans.y, this.canvas.width, this.canvas.height);
 
-      // draw non-current lines
-      for(var i = 0; i < this._lines.length; i++) {
-        if(this._lines[i] == this._currentLine) continue;
-        ctx.strokeStyle = '#090';
-        ctx.lineWidth = 3;
-        this._drawLine(ctx, this._lines[i]);
-      }
-
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 9;
-      this._drawLine(ctx, this._currentLine);
+    // draw non-current lines
+    for(var i = 0; i < this._lines.length; i++) {
+      if(this._lines[i] == this._currentLine) continue;
+      ctx.strokeStyle = '#090';
+      ctx.lineWidth = 3;
+      this._drawLine(ctx, this._lines[i]);
     }
 
-    if(this.options.score) {
-      $(this.options.score).text(score);
-    }
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 9;
+    this._drawLine(ctx, this._currentLine);
   },
 
   _drawMark: function(ctx, mark, number) {
