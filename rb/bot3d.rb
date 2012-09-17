@@ -32,7 +32,7 @@ def select(game, limit)
 end
 
 game = new_game '3D'
-if solution = select(game, 5)
+if solution = select(game, 6)
   sig = solution.map do |x, y, (lx, ly, dx, dy)|
     "#{x},#{y}@#{lx},#{ly}[#{dx},#{dy}]"
   end.join ';'

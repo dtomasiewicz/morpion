@@ -33,25 +33,29 @@ MWeb.prototype = {
   },
 
   init: function(rules) {
-    this.game = null;
     this.canvas = $('<canvas></canvas>').get(0);
+    this.transX = this.transY = 0;
     $(this.target).html(this.canvas);
     this.preview = this.linePreview = null;
-    this.transX = this.transY = 0;
 
     this.game = new Morpion();
     this.history = [];
     this.playing = false;
 
     if(rules) {
-      this.game.len = rules.length;
-      this.game.dis = rules.disjoint;
-      if('marks' in rules) {
-        for(var i = 0; i < rules.marks.length; i++) {
-          this.play.apply(this, rules.marks[i]);
+      try {
+        this.game.len = rules.length;
+        this.game.dis = rules.disjoint;
+        if('marks' in rules) {
+          for(var i = 0; i < rules.marks.length; i++) {
+            this.play.apply(this, rules.marks[i]);
+          }
         }
+        this.start(); // redraws
+      } catch(e) {
+        console.log(e);
+        this._status('Failed to load game :(');
       }
-      this.start();
     } else {
       this._status('Place your marks!');
     }
@@ -119,10 +123,6 @@ MWeb.prototype = {
     });
   },
 
-  _listenDesign: function() {
-
-  },
-
   _status: function(status) {
     if(this.options.status) {
       $(this.options.status).text(status);
@@ -145,7 +145,6 @@ MWeb.prototype = {
       this.game.mark(x, y);
       this.history.push([x, y]);
     }
-    this._redraw();
   },
 
   undo: function() {
@@ -217,19 +216,38 @@ MWeb.prototype = {
       this._drawMark(ctx, this.preview.x, this.preview.y);
     }
 
-    // draw existing marks
+    // draw lines and initial marks
     var score = 0;
     for(var i = 0; i < this.history.length; i++) {
       var mark = this.history[i], line = mark[2];
 
-      ctx.fillStyle = line ? '#000' : '#666';
-      this._drawMark(ctx, mark[0], mark[1]);
+      if(line) {
+        score++;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000';
+        this._drawLine(ctx, line[0], line[1], line[2], line[3]);
+      } else {
+        ctx.fillStyle = '#333';
+        this._drawMark(ctx, mark[0], mark[1]);
+      }
+    }
+
+    // draw marks with(out) move numbers
+    var num = 1;
+    for(var i = 0; i < this.history.length; i++) {
+      var mark = this.history[i], line = mark[2], showNum = null;
 
       if(line) {
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
-        this._drawLine(ctx, line[0], line[1], line[2], line[3]);
-        score++;
+
+        if(this.options.showNumbers) {
+          showNum = num++;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.font = '10px sans';
+        }
+
+        ctx.fillStyle = '#000';
+        this._drawMark(ctx, mark[0], mark[1], showNum);
       }
     }
 
@@ -245,11 +263,19 @@ MWeb.prototype = {
   },
 
   // TODO draw an X
-  _drawMark: function(ctx, x, y) {
+  _drawMark: function(ctx, x, y, number) {
+    var showNum = typeof number == 'number';
+    var cX = (x+.5)*this.options.size, cY = (y+.5)*this.options.size;
+
     ctx.beginPath();
-    ctx.arc((x+.5)*this.options.size, (y+.5)*this.options.size, this.options.size*.25, 0, Math.PI*2);
+    ctx.arc(cX, cY, this.options.size*(showNum ? .4 : .3), 0, Math.PI*2);
     ctx.closePath();
     ctx.fill();
+
+    if(showNum) {
+      ctx.fillStyle = '#FFF';
+      ctx.fillText(number, cX, cY);
+    }
   },
 
   _drawLine: function(ctx, x, y, dx, dy) {
@@ -283,11 +309,19 @@ MWeb.prototype = {
   },
 
   import: function(data) {
-    // TODO
+    data = data.split(';');
+    var meta = data.shift().split(':');
+    var marks = data.map(function(m) {
+      m = m.split(',').map(function(i) { return parseInt(i); });
+      var mark = [m.shift(), m.shift()];
+      if(m[0]) mark.push(m);
+      return mark;
+    });
+    return {length: parseInt(meta[0]), disjoint: parseInt(meta[1]), marks: marks};
   },
 
   export: function() {
-    // TODO
+    return this.game.len+':'+this.game.dis+';'+this.history.join(';');
   }
 
 };
@@ -295,11 +329,34 @@ MWeb.prototype = {
 function playUI() {
   $('#options_play, #score').show();
   $('#options_design').hide();
+  customUI($('#variant_value').val() == 'custom', true);
 }
 
 function designUI() {
   $('#options_design').show();
   $('#options_play, #score').hide();
+  customUI(true, false);
+}
+
+function setInfo(desc, link) {
+  var info = $('#variant_info').html('');
+  if(typeof desc !== 'undefined') {
+    $('<p></p>').text(desc).appendTo(info);
+  }
+  if(typeof link !== 'undefined') {
+    var link = $('<a target="_blank">More Information</a>').attr('href', link);
+    $('<p></p>').append(link).appendTo(info);
+  }
+}
+
+function customUI(show, disabled) {
+  var cr = $('#custom_rules');
+  if(show) {
+    cr.show()
+    $('#length_value, #disjoint_value').prop('disabled', disabled);
+  } else {
+    cr.hide();
+  }
 }
 
 $(function() {
@@ -314,33 +371,22 @@ $(function() {
 
   $('#variant_value').change(function() {
     var variant = $(this).val();
-    var info = $('#variant_info');
-
     if(variant == "custom") {
       ui.init();
-      $('#custom_style').show();
       designUI();
-
-      info.html("<p>This one's up to you! Place your starting marks where you want them, then click Start to begin playing.</p>");
+      setInfo("This one's up to you! Place your starting marks where you want them, then click Start to begin playing.");
     } else {
       $.getJSON('games/'+variant+'.json', function(rules) {
         ui.init(rules);
-        $('#custom_style').hide();
         playUI();
-
-        info.html('');
-        if('desc' in rules) {
-          $('<p></p>').text(rules.desc).appendTo(info);
-        }
-        if('link' in rules) {
-          var link = $('<a target="_blank">More Information</a>').attr('href', rules.link);
-          $('<p></p>').append(link).appendTo(info);
-        }
+        setInfo(rules.desc, rules.link);
       });
     }
   }).change();
 
   $('.restart').click(function() {
+    if(!confirm('Are you sure you want to restart?')) return;
+
     ui.restart();
   });
 
@@ -349,16 +395,27 @@ $(function() {
   });
 
   $('#import').click(function() {
-    ui.import($('#import_data').val());
+    if(!confirm('Are you sure you want to abandon your current game?')) return;
+
+    var rules = ui.import($('#serial_data').val());
+
+    $('#variant_value').val('custom');
+    
+    ui.init(rules);
+    $('#length_value').val(rules.length);
+    $('#disjoint_value').val(rules.disjoint);
+    playUI();
+
+    setInfo('This is an imported game.');
   });
 
   $('#export').click(function() {
-    $('#import_data').val(ui.export());
+    $('#serial_data').val(ui.export());
   });
 
   $('#start').click(function() {
-    ui.game.len = parseInt($('#length').val());
-    ui.game.dis = parseInt($('#disjoint').val());
+    ui.game.len = parseInt($('#length_value').val());
+    ui.game.dis = parseInt($('#disjoint_value').val());
     ui.start();
     playUI();
   });

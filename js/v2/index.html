@@ -24,14 +24,20 @@
 				<h3>Options</h3>
 				<p>
 					<button class="undo">Undo</button> 
-					<label><input class="option" name="showValid" type="checkbox"> show valid lines</label> 
-				    <button class="restart">Restart</button>
+				    <button class="restart">Restart</button> 
+				    <button id="export">Export &rarr;</button> 
+				    <input id="serial_data" type="text">
+				    <button id="import">&rarr; Import</button> 
+				</p>
+				<p>
+					<label><input class="option" name="showValid" type="checkbox"> show valid moves</label> 
+					<label><input class="option" name="showNumbers" type="checkbox"> show move numbers</label> 
 				</p>
 			</div>
 			<div id="options_design">
 				<h3>Options</h3>
 				<p>
-				    <button id="start" style="font-weight: bold">Start</button> 
+				    <button id="start" style="font-weight: bold">Start Game</button> 
 					<button class="undo">Undo</button> 
 				    <button class="restart">Clear</button>
 				</p>
@@ -47,12 +53,12 @@
 						<option value="5D">5D</option>
 						<option value="4T">4T</option>
 						<option value="4D">4D</option>
-						<option value="3T">3T</option>
-						<option value="3D">3D</option>
+						<option value="3T">3T (finite?)</option>
+						<option value="3D">3D (finite)</option>
 						<option value="custom">custom</option>
 					</select> 
-					<span id="custom_style">
-						<select id="length">
+					<span id="custom_rules">
+						<select id="length_value">
 							<option value="1">2</option>
 							<option value="2">3</option>
 							<option value="3">4</option>
@@ -61,7 +67,7 @@
 							<option value="6">7</option>
 							<option value="7">8</option>
 						</select> 
-						<select id="disjoint">
+						<select id="disjoint_value">
 							<option value="0" selected="selected">T</option>
 							<option value="1">D</option>
 							<option value="2">DD</option>
@@ -78,14 +84,12 @@
 
 		<h2>TODO</h2>
 		<ul>
-			<li>import/export
+			<li>presets (loadable interesting games)</li>
+			<li><del>import/export</del>
 				<ul>
 					<li>compatibility with Pentasol format</li>
 				</ul>
 			</li>
-			<li>fix bug causing a valid move to register as invalid (usually with diagonal lines)</li>
-			<li>move numbers</li>
-			<li>presets (loadable interesting games)</li>
 			<li><del>custom configurations</del>
 				<ul>
 					<li>distant future: submissions and highscores?</li>

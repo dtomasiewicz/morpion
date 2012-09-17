@@ -57,7 +57,7 @@ Morpion.prototype = {
         return this;
       }
     }
-    throw "Invalid move!";
+    throw "Invalid move: "+x+","+y+" ("+line+")";
   },
 
   markAll: function(marks) {

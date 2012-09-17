@@ -21,11 +21,9 @@ ul li {
 ul ul {
 	margin: 0 25px;
 }
-button, input[type=text] {
-	padding: 3px;
-}
 button, input, select {
 	vertical-align: middle;
+	padding: 3px;
 }
 #credit {
 	font-size: 0.85em;
@@ -48,7 +46,7 @@ button, input, select {
 #stats {
 	float: left;
 	padding: 15px;
-	width: 400px;
+	width: 500px;
 }
 #stats h3 {
 	font-weight: bold;
