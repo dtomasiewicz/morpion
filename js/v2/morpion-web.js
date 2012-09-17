@@ -20,6 +20,90 @@ var MWeb = function(target, options) {
   }, options || {});
 };
 
+MWeb._inputModes = {
+
+  initial: {},
+
+  pointSelect: {
+
+    mousemove: function(e) {
+      this._preview = this._point(e);
+      this._redraw();
+    },
+
+    mouseout: function(e) {
+      this._preview = null;
+      this._redraw();
+    },
+
+    mousedown: function(e) {
+      var p = this._point(e);
+
+      if(this.game.isPlayed(p.x, p.y)) {
+        this._status('You already played there...');
+        return;
+      }
+
+      if(this.playing) {
+        var lines = this.game.lines(p.x, p.y);
+        var played = false;
+
+        if(lines.length == 0) {
+          this._status('Invalid move!');
+        } else if(lines.length == 1) {
+          this.move(p.x, p.y, lines[0]);
+        } else {
+          this._lineSelect(p, lines, {x: e.pageX, y: e.pageY});
+        }
+      } else {
+        this.play(p.x, p.y);
+        this._status('Mark placed.');
+      }
+
+      this._redraw();
+    }
+  },
+
+  lineSelect: {
+
+    mousedown: function(e) {
+      if(e.which == 1) {
+        this._dragging = true;
+      } else {
+        this._currentPoint = this._lines = this._currentLine = null;
+        this._pointSelect();
+      }
+      this._redraw();
+    },
+
+    mousemove: function(e) {
+      this._dragging = true;
+      this._setCurrentLine({x: e.pageX, y: e.pageY});
+      this._redraw();
+    },
+
+    mouseup: function(e) {
+      if(!this._dragging) return;
+
+      this.move(this._currentPoint.x, this._currentPoint.y, this._currentLine);
+      this._currentPoint = this._lines = this._currentLine = null;
+      this._pointSelect();
+      this._redraw();
+    }
+
+  }
+
+};
+
+var Geo = {
+  midpoint: function(p1, p2) {
+    return {x: (p1.x+p2.x)/2, y: (p1.y+p2.y)/2};
+  },
+  distance: function(p1, p2) {
+    return Math.sqrt(Math.pow(p1.x-p2.x, 2) + Math.pow(p1.y-p2.y, 2));
+  }
+};
+
 MWeb.prototype = {
   
   option: function(name, value) {
@@ -36,11 +120,12 @@ MWeb.prototype = {
     this.canvas = $('<canvas></canvas>').get(0);
     this.transX = this.transY = 0;
     $(this.target).html(this.canvas);
-    this.preview = this.linePreview = null;
 
     this.game = new Morpion();
     this.history = [];
     this.playing = false;
+
+    this._listen();
 
     if(rules) {
       try {
@@ -51,16 +136,16 @@ MWeb.prototype = {
             this.play.apply(this, rules.marks[i]);
           }
         }
+        this._pointSelect();
         this.start(); // redraws
       } catch(e) {
         console.log(e);
         this._status('Failed to load game :(');
       }
     } else {
+      this._pointSelect();
       this._status('Place your marks!');
     }
-
-    this._listen();
   },
 
   start: function() {
@@ -68,59 +153,61 @@ MWeb.prototype = {
     this._status('Game started.');
   },
 
+  _setCurrentLine: function(mouse) {
+    var bestMid = -1, bestTip = -1;
+
+    for(var i = 0; i < this._lines.length; i++) {
+      var lx = this._lines[i][0], ly = this._lines[i][1], dx = this._lines[i][2], dy = this._lines[i][3];
+      
+      var p1 = this._coords(lx, ly);
+      var p2 = this._coords(lx+this.game.len*dx, ly+this.game.len*dy);
+
+      var mid = Geo.midpoint(p1, p2);
+      var dMid = Math.round(Geo.distance(mouse, mid));
+      var dTip = Math.round(Math.min(Geo.distance(mouse, p1), Geo.distance(mouse, p2)));
+
+      if(bestMid == -1 || dMid < bestMid || (dMid == bestMid && dTip < bestTip)) {
+        bestMid = dMid;
+        bestTip = dTip;
+        this._currentLine = this._lines[i];
+      }
+    }
+  },
+
   _listen: function() {
-    var mweb = this;
+    var that = this;
     
-    $(this.canvas).on('mousemove.preview', function(e) {
-      mweb.preview = mweb._coords(e);
-      mweb._redraw();
-    });
-    
-    $(this.canvas).on('mouseout.preview', function() {
-      mweb.preview = null;
-      mweb._redraw();
-    });
-
-    $(this.canvas).on('click.play', function(e) {
-      var c = mweb._coords(e);
-      if(mweb.game.isPlayed(c.x, c.y)) {
-        mweb._status('You already played there...');
-        return;
+    $(this.canvas).on('mousemove mouseup mousedown mouseout', function(event) {
+      if(event.type in that._input) {
+        event.preventDefault();
+        that._input[event.type].call(that, event);
       }
-
-      if(mweb.playing) {
-        var lines = mweb.game.lines(c.x, c.y);
-        var played = false;
-
-        if(lines.length == 0) {
-          mweb._status('Invalid move!');
-        } else if(lines.length == 1) {
-          mweb.play(c.x, c.y, lines[0]);
-          played = true;
-        } else {
-          for(var i = 0; i < lines.length; i++) {
-            mweb.linePreview = lines[i];
-            mweb._redraw();
-            if(confirm('Play this one?')) {
-              mweb.play(c.x, c.y, lines[i]);
-              played = true;
-              break;
-            }
-          }
-          mweb.linePreview = null;
-        }
-
-        if(played) {
-          var mi = Math.floor(Math.random()*mweb.options.messages.length);
-          mweb._status(mweb.options.messages[mi]);
-        }
-      } else {
-        mweb.play(c.x, c.y);
-        mweb._status('Mark placed.');
-      }
-
-      mweb._redraw();
     });
+    $(this.canvas).on('contextmenu', function(e) { e.preventDefault(); });
+
+    this._input = MWeb._inputModes.initial;
+  },
+
+  _pointSelect: function() {
+    this._preview = null;
+    this._input = MWeb._inputModes.pointSelect;
+    this.canvas.style.cursor = 'crosshair';
+  },
+
+  _lineSelect: function(point, lines, mouse) {
+    this._currentPoint = point;
+    this._lines = lines;
+    this._dragging = false;
+
+    if(mouse) {
+      this._setCurrentLine(mouse);
+    } else {
+      this._currentLine = this._lines[0];
+    }
+
+    this._input = MWeb._inputModes.lineSelect;
+    this.canvas.style.cursor = 'crosshair';
+    this._status('Select a line.');
   },
 
   _status: function(status) {
@@ -130,11 +217,18 @@ MWeb.prototype = {
     }
   },
 
-  _coords: function(event) {
+  _point: function(event) {
     return {
       x: Math.floor((event.pageX-$(this.canvas).offset().left-this.transX)/this.options.size),
       y: Math.floor((event.pageY-$(this.canvas).offset().top-this.transY)/this.options.size)
     }
+  },
+
+  _coords: function(x, y) {
+    return {
+      x: this.options.size*(x+.5)+this.transX+$(this.canvas).offset().left,
+      y: this.options.size*(y+.5)+this.transY+$(this.canvas).offset().top
+    };
   },
 
   play: function(x, y, line) {
@@ -145,6 +239,12 @@ MWeb.prototype = {
       this.game.mark(x, y);
       this.history.push([x, y]);
     }
+  },
+
+  move: function(x, y, line) {
+    this.play(x, y, line);
+    var mi = Math.floor(Math.random()*this.options.messages.length);
+    this._status(this.options.messages[mi]);
   },
 
   undo: function() {
@@ -191,53 +291,45 @@ MWeb.prototype = {
     this.transY = (yPad-b.yMin)*this.options.size;
     ctx.translate(this.transX, this.transY);
 
-    if(this.options.showValid) {
+    if(!this._lines && this.options.showValid) {
       ctx.fillStyle = '#CCC';
       ctx.strokeStyle = "#CCC";
       ctx.lineWidth = 1;
       var v = this.game.validMoves();
       for(var i = 0; i < v.length; i++) {
-        var m = v[i], l = v[i][2];
-        this._drawMark(ctx, m[0], m[1]);
-        this._drawLine(ctx, l[0], l[1], l[2], l[3]);
+        this._drawMark(ctx, v[i]);
+        this._drawLine(ctx, v[i][2]);
       }
     }
 
-    /* uncomment to show boundaries
-    for(var xy in this.game.bound) {
-      ctx.fillStyle = '#E9E9E9';
-      xy = xy.split(',');
-      this._drawMark.call(this, ctx, parseInt(xy[0]), parseInt(xy[1]));
-    }*/
-
     // draw preview
-    if(this.preview) {
+    if(this._preview) {
       ctx.fillStyle = '#f00';
-      this._drawMark(ctx, this.preview.x, this.preview.y);
+      this._drawMark(ctx, [this._preview.x, this._preview.y]);
     }
 
     // draw lines and initial marks
     var score = 0;
     for(var i = 0; i < this.history.length; i++) {
-      var mark = this.history[i], line = mark[2];
+      var mark = this.history[i];
 
-      if(line) {
+      if(mark[2]) {
         score++;
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#000';
-        this._drawLine(ctx, line[0], line[1], line[2], line[3]);
+        this._drawLine(ctx, mark[2]);
       } else {
         ctx.fillStyle = '#333';
-        this._drawMark(ctx, mark[0], mark[1]);
+        this._drawMark(ctx, mark);
       }
     }
 
     // draw marks with(out) move numbers
     var num = 1;
     for(var i = 0; i < this.history.length; i++) {
-      var mark = this.history[i], line = mark[2], showNum = null;
+      var mark = this.history[i], showNum = null;
 
-      if(line) {
+      if(mark[2]) {
 
         if(this.options.showNumbers) {
           showNum = num++;
@@ -247,14 +339,26 @@ MWeb.prototype = {
         }
 
         ctx.fillStyle = '#000';
-        this._drawMark(ctx, mark[0], mark[1], showNum);
+        this._drawMark(ctx, mark, showNum);
       }
     }
 
-    if(this.linePreview) {
-      ctx.strokeStyle = '#f00';
-      ctx.lineWidth = 3;
-      this._drawLine(ctx, this.linePreview[0], this.linePreview[1], this.linePreview[2], this.linePreview[3]);
+    if(this._lines) {
+      // white translucent overlay
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillRect(-this.transX, -this.transY, this.canvas.width, this.canvas.height);
+
+      // draw non-current lines
+      for(var i = 0; i < this._lines.length; i++) {
+        if(this._lines[i] == this._currentLine) continue;
+        ctx.strokeStyle = '#090';
+        ctx.lineWidth = 3;
+        this._drawLine(ctx, this._lines[i]);
+      }
+
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 9;
+      this._drawLine(ctx, this._currentLine);
     }
 
     if(this.options.score) {
@@ -262,8 +366,8 @@ MWeb.prototype = {
     }
   },
 
-  // TODO draw an X
-  _drawMark: function(ctx, x, y, number) {
+  _drawMark: function(ctx, mark, number) {
+    var x = mark[0], y = mark[1];
     var showNum = typeof number == 'number';
     var cX = (x+.5)*this.options.size, cY = (y+.5)*this.options.size;
 
@@ -278,12 +382,15 @@ MWeb.prototype = {
     }
   },
 
-  _drawLine: function(ctx, x, y, dx, dy) {
+  _drawLine: function(ctx, line) {
+    ctx.lineCap = 'round';
+    var x = line[0], y = line[1], dx = line[2], dy = line[3];
     x += .5; // center within cell
     y += .5; // center within cell
     ctx.beginPath();
     ctx.moveTo(x*this.options.size, y*this.options.size);
     ctx.lineTo((x+this.game.len*dx)*this.options.size, (y+this.game.len*dy)*this.options.size);
+    ctx.moveTo(0, 0);
     ctx.closePath();
     ctx.stroke();
   },
@@ -418,5 +525,10 @@ $(function() {
     ui.game.dis = parseInt($('#disjoint_value').val());
     ui.start();
     playUI();
+  });
+
+  $('h1').on('click.wtf', function() {
+    console.log('cliccked!');
+    $(this).off('*.wtf');
   });
 });
