@@ -154,21 +154,34 @@ MWeb.prototype = {
   },
 
   _setCurrentLine: function(mouse) {
-    var bestMid = -1, bestTip = -1;
+    var bestLine = bestMid = -1;
 
     for(var i = 0; i < this._lines.length; i++) {
       var lx = this._lines[i][0], ly = this._lines[i][1], dx = this._lines[i][2], dy = this._lines[i][3];
       
       var p1 = this._coords(lx, ly);
       var p2 = this._coords(lx+this.game.len*dx, ly+this.game.len*dy);
+      var dy = p2.y-p1.y, dx = p2.x-p1.x;
 
+      // distance to line as primary determinant
+      // TODO this should be distance to line SEGMENT
+      var dLine;
+      if(dx == 0) {
+        // line is vertical
+        dLine = mouse.x-p1.x;
+      } else {
+        var m = (p2.y-p1.y)/(p2.x-p1.x);
+        dLine = p1.y-mouse.y+m*(mouse.x-p1.x);
+      }
+      dLine = Math.round(Math.abs(dLine));
+
+      // distance to midpoint as secondary determinant
       var mid = Geo.midpoint(p1, p2);
-      var dMid = Math.round(Geo.distance(mouse, mid));
-      var dTip = Math.round(Math.min(Geo.distance(mouse, p1), Geo.distance(mouse, p2)));
+      var dMid = Geo.distance(mouse, mid);
 
-      if(bestMid == -1 || dMid < bestMid || (dMid == bestMid && dTip < bestTip)) {
+      if(bestLine == -1 || dLine < bestLine || (dLine == bestLine && dMid < bestMid)) {
+        bestLine = dLine;
         bestMid = dMid;
-        bestTip = dTip;
         this._currentLine = this._lines[i];
       }
     }
