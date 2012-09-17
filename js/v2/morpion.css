@@ -42,10 +42,12 @@ button, input, select {
 #morpion {
 	float: left;
 }
-#stats {
+#stats, #extra {
 	float: left;
 	padding: 15px;
-	width: 500px;
+}
+#stats {
+	width: 430px;
 }
 #stats h3 {
 	font-weight: bold;
