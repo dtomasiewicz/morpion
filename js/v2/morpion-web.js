@@ -1,3 +1,12 @@
+var Geo = {
+  midpoint: function(p1, p2) {
+    return {x: (p1.x+p2.x)/2, y: (p1.y+p2.y)/2};
+  },
+  distance: function(p1, p2) {
+    return Math.sqrt(Math.pow(p1.x-p2.x, 2) + Math.pow(p1.y-p2.y, 2));
+  }
+};
+
 var MWeb = function(target, options) {
   this.target = target;
 
@@ -70,7 +79,6 @@ MWeb._inputModes = {
           this.status('Invalid move!');
         } else if(lines.length == 1) {
           this.move(p.x, p.y, lines[0]);
-          this.cute();
         } else {
           this._setInput('lineSelect', lines, {x: e.pageX, y: e.pageY});
         }
@@ -101,8 +109,8 @@ MWeb._inputModes = {
     },
 
     cleanup: function() {
+      this.canvas.style.cursor = 'auto';
       this._lines = this._currentLine = null;
-      this._redraw();
     },
 
     mousedown: function(e) {
@@ -125,7 +133,6 @@ MWeb._inputModes = {
       this._down = false;
       
       this.move(this._currentPoint.x, this._currentPoint.y, this._currentLine);
-      this.cute();
       this._setInput('pointSelect');
     }
 
@@ -133,30 +140,156 @@ MWeb._inputModes = {
 
 };
 
-var Geo = {
-  midpoint: function(p1, p2) {
-    return {x: (p1.x+p2.x)/2, y: (p1.y+p2.y)/2};
-  },
-  distance: function(p1, p2) {
-    return Math.sqrt(Math.pow(p1.x-p2.x, 2) + Math.pow(p1.y-p2.y, 2));
-  }
-};
-
 MWeb.prototype = {
 
-  custom: function() {
-    this.reset();
+  // start the game with its current configuration. if additional configuration
+  // _rules_ are provided, they will be applied first. redraws the canvas.
+  start: function(rules) {
+    if(typeof rules !== 'undefined') {
+      this.config(rules);
+    }
+
+    this.game = new Morpion(this._config.length, this._config.disjoint);
+    for(var i = 0; i < this._config.marks.length; i++) {
+      var m = this._config.marks[i];
+      this.game.mark(m[0], m[1]);
+    }
+    for(var i = 0; i < this._config.moves.length; i++) {
+      var m = this._config.moves[i];
+      this.game.markSafe(m[0], m[1], m[2]);
+    }
     this._setInput('pointSelect');
+    this.status('Game started.');
   },
 
+  // resets the UI, discarding the current game and disabling canvas input. redraws
+  // the canvas.
   reset: function() {
-    this._setInput('initial');
     this.game = null;
-    this._config = {length: 4, disjoint: 0, marks: []};
-    this._history = [];
+    this._config = {length: 4, disjoint: 0, marks: [], moves: []}; // default is 5T
+    this._setInput('initial');
     this._redraw();
   },
 
+  // initialize the UI for creation of a custom game. redraws the canvas.
+  custom: function() {
+    this.reset();
+    this._setInput('pointSelect');
+    this._redraw();
+  },
+  
+  // set or get a UI option. redraws the canvas if setting.
+  option: function(name, value) {
+    if(typeof value === 'undefined') {
+      return this.options[name];
+    } else {
+      this.options[name] = value;
+      this._redraw();
+      return this;
+    }
+  },
+
+  // set or get one or more game configuration values. redraws the canvas if setting.
+  config: function(attr, value) {
+    if(typeof attr === 'undefined') {
+      return $.extend({}, this._config);
+    } else if(typeof attr === 'string' && typeof value === 'undefined') {
+      return this._config[attr];
+    } else {
+      // can not change configuration while game is in progress
+      if(this.game) this.reset();
+
+      if(typeof attr == 'object') {
+        $.extend(this._config, attr);
+      } else {
+        this._config[attr] = value;
+      }
+
+      this._redraw();
+      return this;
+    }
+  },
+
+  // check if the given point is open
+  isOpen: function(x, y) {
+    if(this.game) {
+      return !this.game.isPlayed(x, y);
+    } else {
+      for(var i = 0; i < this._config.marks.length; i++) {
+        var m = this._config.marks[i];
+        if(m[0] == x && m[1] == y) {
+          return false;
+        }
+      }
+      return true;
+    }
+  },
+
+  // sets the current status message and redraws the canvas.
+  status: function(status) {
+    if(this.options.status) {
+      $(this.options.status).text(status);
+      this._redraw();
+    }
+  },
+
+  // plays the given marker and line. redraws the canvas.
+  move: function(x, y, line) {
+    this.game.markSafe(x, y, line);
+    this._config.moves.push([x, y, line]);
+    var mi = Math.floor(Math.random()*this.options.messages.length);
+    this.status(this.options.messages[mi]);
+  },
+
+  // undoes the most recent mark placement or move and redraws the canvas. returns true if
+  // a placement/move was undone; false if there was nothing to undo.
+  undo: function() {
+    if(this.game) {
+      if(this._config.moves.length > 0) {
+        this.game.unmark.apply(this.game, this._config.moves.pop());
+        this.status('Move undone.');
+        return true;
+      }
+    } else if(this._config.marks.length > 0) {
+      this._config.marks.pop();
+      this.status('Mark removed.');
+      return true;
+    } else {
+      this.status('Nothing to undo!');
+    }
+
+    return false;
+  },
+
+  // undoes all mark placements or moves and redraws the canvas (a lot of times...)
+  restart: function() {
+    while(this.undo());
+    this._setInput('pointSelect');
+    this.status('Game restarted.');
+  },
+
+  // determines if "losable" progress has been made in the current UI (partially-placed
+  // markers, or any lines)
+  progress: function() {
+    return (this.game ? this._config.moves.length : this._config.marks.length) > 0;
+  },
+
+  // applies canvas action listeners to forward mouse events to the current input handler
+  _listen: function() {
+    var that = this;
+    
+    $(this.canvas).on('mousemove mouseup mousedown mouseout', function(event) {
+      if(event.type in that._input) {
+        event.preventDefault();
+        that._input[event.type].call(that, event);
+      }
+    });
+
+    $(this.canvas).on('contextmenu', function(e) { e.preventDefault(); });
+  },
+
+  // sets the current input handler. attempts to invoke _cleanup_ on the old handler
+  // and _setup_ on the new one.
   _setInput: function(input) {
     var args = Array.prototype.slice.call(arguments, 0);
     args.shift();
@@ -169,78 +302,10 @@ MWeb.prototype = {
       this._input.setup.apply(this, args);
     }
   },
-  
-  option: function(name, value) {
-    if(typeof value === 'undefined') {
-      return this.options[name];
-    } else {
-      this.options[name] = value;
-      this._redraw();
-      return this;
-    }
-  },
 
-  isOpen: function(x, y) {
-    if(this.game) {
-      return !this.game.isPlayed(x, y);
-    } else {
-      for(var i = 0; i < this._history.length; i++) {
-        if(this._history[i][0] == x && this._history[i][1] == y) {
-          return false;
-        }
-      }
-      return true;
-    }
-  },
-
-  config: function(attr, value) {
-    if(typeof attr === 'undefined') {
-      return $.extend({}, {moves: this._history}, this._config);
-    } else if(typeof attr === 'string' && typeof value === 'undefined') {
-      return this._config[attr];
-    } else {
-      // can not change configuration while game is in progress
-      if(this.game) this.reset();
-
-      if(typeof attr == 'object') {
-        $.extend(this._config, attr);
-      } else {
-        this._config[attr] = value;
-      }
-      return this;
-    }
-  },
-
-  cute: function() {
-    var mi = Math.floor(Math.random()*this.options.messages.length);
-    this.status(this.options.messages[mi]);
-  },
-
-  start: function(rules) {
-    if(typeof rules !== 'undefined') {
-      this.config(rules);
-    }
-
-    try {
-      this.game = new Morpion(this._config.length, this._config.disjoint);
-      this._history = [];
-      for(var i = 0; i < this._config.marks.length; i++) {
-        var m = this._config.marks[i];
-        this.game.mark(m[0], m[1]);
-      }
-      if('moves' in this._config) {
-        for(var i = 0; i < this._config.moves.length; i++) {
-          this.move.apply(this, this._config.moves[i]);
-        }
-      }
-      this._setInput('pointSelect');
-      this.status('Game started.');
-    } catch(e) {
-      console.log(e);
-      this.status('Failed to load game :(');
-    }
-  },
-
+  // in lineSelect mode, computes which candidate line is closest to the mouse pointer and
+  // sets that as the currentLine. "closeness" is determined by mouse-to-line-segment distance,
+  // then by mouse-to-midpoint distance. p is an {x;y} point
   _setCurrentLine: function(p) {
     var bestLine = bestMid = -1;
 
@@ -251,7 +316,6 @@ MWeb.prototype = {
       var w = this._page(lx+this.game.len*dx, ly+this.game.len*dy);
 
       // distance to line segment is primary determinant
-      // thanks: http://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
       var l2 = Math.pow(v.x-w.x, 2) + Math.pow(v.y-w.y, 2);
       if(l2 == 0) {
         dLine = Geo.distance(p, v);
@@ -279,25 +343,7 @@ MWeb.prototype = {
     }
   },
 
-  _listen: function() {
-    var that = this;
-    
-    $(this.canvas).on('mousemove mouseup mousedown mouseout', function(event) {
-      if(event.type in that._input) {
-        event.preventDefault();
-        that._input[event.type].call(that, event);
-      }
-    });
-    $(this.canvas).on('contextmenu', function(e) { e.preventDefault(); });
-  },
-
-  status: function(status) {
-    if(this.options.status) {
-      $(this.options.status).text(status);
-      this._redraw();
-    }
-  },
-
+  // returns an {x;y} object for the point at the given page (pixel) coordinates
   _point: function(event) {
     return {
       x: Math.floor((event.pageX-$(this.canvas).offset().left-this._trans.x)/this.options.size),
@@ -305,6 +351,7 @@ MWeb.prototype = {
     }
   },
 
+  // returns an {x;y} object with the page (pixel) coordinates at the center of the given point
   _page: function(x, y) {
     return {
       x: this.options.size*(x+.5)+this._trans.x+$(this.canvas).offset().left,
@@ -312,164 +359,9 @@ MWeb.prototype = {
     };
   },
 
-  move: function(x, y, line) {
-    this.game.markSafe(x, y, line);
-    this._history.push([x, y, line]);
-  },
-
-  undo: function() {
-    if(this.game) {
-      if(this._history.length > 0) {
-        this.game.unmark.apply(this.game, this._history.pop());
-        this.status('Move undone!');
-        return true;
-      }
-    } else if(this._config.marks.length > 0) {
-      this._config.marks.pop();
-      this.status('Mark removed.');
-      return true;
-    }
-
-    this.status('Nothing to undo!');
-    return false;
-  },
-
-  restart: function() {
-    while(this.undo());
-    this._setInput('pointSelect');
-    this.status('Game restarted.');
-  },
-
-  _redraw: function() {
-
-    var ctx = this.canvas.getContext('2d');
-
-    var b = this._bounds();
-    var w = b.xMax-b.xMin+1;
-    var h = b.yMax-b.yMin+1;
-
-    var p = this.options.minPadding;
-    var xPad = (w+p*2) < this.options.minWidth ? Math.ceil((this.options.minWidth-w)/2) : p;
-    var yPad = (h+p*2) < this.options.minHeight ? Math.ceil((this.options.minHeight-h)/2) : p;
-
-    this.canvas.width = (w+xPad*2)*this.options.size;
-    this.canvas.height = (h+yPad*2)*this.options.size;
-
-    // allows us to draw using actual coordinates
-    this._trans = {
-      x: (xPad-b.xMin)*this.options.size,
-      y: (yPad-b.yMin)*this.options.size
-    };
-    ctx.translate(this._trans.x, this._trans.y);
-
-    if(this.game && !this._lines && this.options.showValid) {
-      this._drawValid(ctx);
-    }
-
-    // draw preview
-    if(this._currentPoint) {
-      ctx.fillStyle = '#f00';
-      this._drawMark(ctx, [this._currentPoint.x, this._currentPoint.y]);
-    }
-
-    // draw initial marks
-    for(var i = 0; i < this._config.marks.length; i++) {
-      ctx.fillStyle = '#333';
-      this._drawMark(ctx, this._config.marks[i]);
-    }
-
-    // draw history lines
-    if(this.game) {
-      var s;
-      for(s = 0; s < this._history.length; s++) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#000';
-        this._drawLine(ctx, this._history[s][2]);
-      }
-      if(this.options.score) {
-        $(this.options.score).text(s);
-      }
-    }
-
-    // draw history marks
-    for(var i = 0; i < this._history.length; i++) {
-      if(this.options.showNumbers) {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = '10px sans';
-      }
-
-      ctx.fillStyle = '#000';
-      this._drawMark(ctx, this._history[i], this.options.showNumbers ? i+1 : null);
-    }
-
-    if(this._lines) {
-      this._drawLines(ctx);
-    }
-
-  },
-
-  _drawValid: function(ctx) {
-    ctx.fillStyle = '#CCC';
-    ctx.strokeStyle = "#CCC";
-    ctx.lineWidth = 1;
-
-    var v = this.game.validMoves();
-    for(var i = 0; i < v.length; i++) {
-      this._drawMark(ctx, v[i]);
-      this._drawLine(ctx, v[i][2]);
-    }
-  },
-
-  _drawLines: function(ctx) {
-    // white translucent overlay
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.fillRect(-this._trans.x, -this._trans.y, this.canvas.width, this.canvas.height);
-
-    // draw non-current lines
-    for(var i = 0; i < this._lines.length; i++) {
-      if(this._lines[i] == this._currentLine) continue;
-      ctx.strokeStyle = '#090';
-      ctx.lineWidth = 3;
-      this._drawLine(ctx, this._lines[i]);
-    }
-
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 9;
-    this._drawLine(ctx, this._currentLine);
-  },
-
-  _drawMark: function(ctx, mark, number) {
-    var x = mark[0], y = mark[1];
-    var showNum = typeof number == 'number';
-    var cX = (x+.5)*this.options.size, cY = (y+.5)*this.options.size;
-
-    ctx.beginPath();
-    ctx.arc(cX, cY, this.options.size*(showNum ? .4 : .3), 0, Math.PI*2);
-    ctx.closePath();
-    ctx.fill();
-
-    if(showNum) {
-      ctx.fillStyle = '#FFF';
-      ctx.fillText(number, cX, cY);
-    }
-  },
-
-  _drawLine: function(ctx, line) {
-    ctx.lineCap = 'round';
-    var x = line[0], y = line[1], dx = line[2], dy = line[3];
-    x += .5; // center within cell
-    y += .5; // center within cell
-    ctx.beginPath();
-    ctx.moveTo(x*this.options.size, y*this.options.size);
-    ctx.lineTo((x+this.game.len*dx)*this.options.size, (y+this.game.len*dy)*this.options.size);
-    ctx.moveTo(0, 0);
-    ctx.closePath();
-    ctx.stroke();
-  },
-
+  // finds the x and y bounds (min and max) for all markers in the game
   _bounds: function() {
-    var marks = this._config.marks.concat(this._history);
+    var marks = this._config.marks.concat(this._config.moves);
 
     if(marks.length > 0) {
       var b = {xMin: marks[0][0], xMax: marks[0][0], yMin: marks[0][1], yMax: marks[0][1]};
@@ -486,8 +378,142 @@ MWeb.prototype = {
     }
   },
 
-  progress: function() {
-    return this._history.length > 0;
+  // draws all elements onto the canvas, and data elements (e.g. score) to their respective
+  // targets.
+  _redraw: function() {
+
+    var ctx = this.canvas.getContext('2d');
+
+    var b = this._bounds();
+    var w = b.xMax-b.xMin+1;
+    var h = b.yMax-b.yMin+1;
+
+    // determine x and y padding, considering minPadding and minHeight/Width
+    var p = this.options.minPadding;
+    var xPad = (w+p*2) < this.options.minWidth ? Math.ceil((this.options.minWidth-w)/2) : p;
+    var yPad = (h+p*2) < this.options.minHeight ? Math.ceil((this.options.minHeight-h)/2) : p;
+
+    this.canvas.width = (w+xPad*2)*this.options.size;
+    this.canvas.height = (h+yPad*2)*this.options.size;
+
+    // sets the origin to the 0,0 mark point
+    this._trans = {
+      x: (xPad-b.xMin)*this.options.size,
+      y: (yPad-b.yMin)*this.options.size
+    };
+    ctx.translate(this._trans.x, this._trans.y);
+
+    // draw valid lines
+    if(this.game && !this._lines && this.options.showValid) {
+      this._drawValid(ctx);
+    }
+
+    // draw preview
+    if(this._currentPoint) {
+      ctx.fillStyle = '#f00';
+      this._drawMark(ctx, [this._currentPoint.x, this._currentPoint.y]);
+    }
+
+    // draw initial marks
+    for(var i = 0; i < this._config.marks.length; i++) {
+      ctx.fillStyle = '#333';
+      this._drawMark(ctx, this._config.marks[i]);
+    }
+
+    // draw move lines
+    if(this.game) {
+      var s;
+      for(s = 0; s < this._config.moves.length; s++) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000';
+        this._drawLine(ctx, this._config.moves[s][2]);
+      }
+      if(this.options.score) {
+        $(this.options.score).text(s);
+      }
+    }
+
+    // draw move markers
+    for(var i = 0; i < this._config.moves.length; i++) {
+      if(this.options.showNumbers) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '10px sans';
+      }
+
+      ctx.fillStyle = '#000';
+      this._drawMark(ctx, this._config.moves[i], this.options.showNumbers ? i+1 : null);
+    }
+
+    // draw candidate lines
+    if(this._lines) {
+      this._drawLines(ctx);
+    }
+
+  },
+
+  // draws all valid lines to the canvas
+  _drawValid: function(ctx) {
+    ctx.fillStyle = '#CCC';
+    ctx.strokeStyle = "#CCC";
+    ctx.lineWidth = 1;
+
+    var v = this.game.validMoves();
+    for(var i = 0; i < v.length; i++) {
+      this._drawMark(ctx, v[i]);
+      this._drawLine(ctx, v[i][2]);
+    }
+  },
+
+  // draws all candidate lines to the canvas
+  _drawLines: function(ctx) {
+    // white translucent overlay
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
+    ctx.fillRect(-this._trans.x, -this._trans.y, this.canvas.width, this.canvas.height);
+
+    // draw non-current lines
+    for(var i = 0; i < this._lines.length; i++) {
+      if(this._lines[i] == this._currentLine) continue;
+      ctx.strokeStyle = '#090';
+      ctx.lineWidth = 3;
+      this._drawLine(ctx, this._lines[i]);
+    }
+
+    // current line
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 9;
+    this._drawLine(ctx, this._currentLine);
+  },
+
+  // draws the given mark to the canvas. mark is [x, y]
+  _drawMark: function(ctx, mark, number) {
+    var x = mark[0], y = mark[1];
+    var showNum = typeof number == 'number';
+    var cX = (x+.5)*this.options.size, cY = (y+.5)*this.options.size;
+
+    ctx.beginPath();
+    ctx.arc(cX, cY, this.options.size*(showNum ? .4 : .3), 0, Math.PI*2);
+    ctx.closePath();
+    ctx.fill();
+
+    if(showNum) {
+      ctx.fillStyle = '#FFF';
+      ctx.fillText(number, cX, cY);
+    }
+  },
+
+  // draws a line to the canvas. line is [x, y, dx, dy]
+  _drawLine: function(ctx, line) {
+    ctx.lineCap = 'round';
+    var x = line[0], y = line[1], dx = line[2], dy = line[3];
+    x += .5; // center within cell
+    y += .5; // center within cell
+    ctx.beginPath();
+    ctx.moveTo(x*this.options.size, y*this.options.size);
+    ctx.lineTo((x+this.game.len*dx)*this.options.size, (y+this.game.len*dy)*this.options.size);
+    ctx.moveTo(0, 0);
+    ctx.closePath();
+    ctx.stroke();
   }
 
 };
@@ -522,6 +548,7 @@ function customEnabled(enabled) {
   $('.custom_ui').filter('input, textarea, select, button').prop('disabled', !enabled);
 }
 
+// populates custom fields with loaded/imported configuration data
 function populate(config) {
   $('#variant_value').val('custom');
   $('.custom_config').each(function() {
@@ -531,6 +558,7 @@ function populate(config) {
 }
 
 $(function() {
+  
   var ui = new MWeb($('#morpion').get(0), {
     score: $('#score_value').get(0),
     status: $('#status_value').get(0)
@@ -554,7 +582,7 @@ $(function() {
     var variant = $(this).val();
     if(variant == "custom") {
       ui.custom();
-      populate(ui.config());
+      populate(ui.config()); // populate with default properties
       designUI();
     } else {
       $.getJSON('games/'+variant+'.json', function(rules) {
@@ -612,4 +640,5 @@ $(function() {
     populate(ui.config());
     playUI();
   });
+
 });
