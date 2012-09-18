@@ -326,6 +326,7 @@ MWeb.prototype = {
       }
     } else if(this._config.marks.length > 0) {
       this._config.marks.pop();
+      this.status('Mark removed.');
       return true;
     }
 
@@ -335,6 +336,7 @@ MWeb.prototype = {
 
   restart: function() {
     while(this.undo());
+    this._setInput('pointSelect');
     this.status('Game restarted.');
   },
 
