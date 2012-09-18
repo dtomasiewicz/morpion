@@ -18,6 +18,13 @@ var MWeb = function(target, options) {
       'Nice move, buddy.'
     ]
   }, options || {});
+
+  this.canvas = $('<canvas></canvas>').get(0);
+  this._trans = {x: 0, y: 0};
+  $(this.target).html(this.canvas);
+
+  this._listen();
+  this.reset();
 };
 
 MWeb._inputModes = {
@@ -25,6 +32,14 @@ MWeb._inputModes = {
   initial: {},
 
   pointSelect: {
+
+    setup: function() {
+      this.canvas.style.cursor = 'crosshair';
+    },
+
+    cleanup: function() {
+      this.canvas.style.cursor = 'auto';
+    },
 
     mousemove: function(e) {
       this._currentPoint = this._point(e);
@@ -42,26 +57,25 @@ MWeb._inputModes = {
         return;
       }
 
-      var p = this._point(e);
+      var p = this._currentPoint = this._point(e);
 
-      if(this.game.isPlayed(p.x, p.y)) {
-        this.status('You already played there...');
+      if(!this.isOpen(p.x, p.y)) {
+        this.status("That spot isn't open!");
         return;
       }
 
-      if(this.playing) {
+      if(this.game) {
         var lines = this.game.lines(p.x, p.y);
-        var played = false;
-
         if(lines.length == 0) {
           this.status('Invalid move!');
         } else if(lines.length == 1) {
           this.move(p.x, p.y, lines[0]);
+          this.cute();
         } else {
-          this._lineSelect(p, lines, {x: e.pageX, y: e.pageY});
+          this._setInput('lineSelect', lines, {x: e.pageX, y: e.pageY});
         }
       } else {
-        this.play(p.x, p.y);
+        this._config.marks.push([p.x, p.y]);
         this.status('Mark placed.');
       }
 
@@ -71,12 +85,31 @@ MWeb._inputModes = {
 
   lineSelect: {
 
+    setup: function(lines, mouse) {
+      this._lines = lines;
+      this._dragging = false;
+
+      if(mouse) {
+        this._setCurrentLine(mouse);
+      } else {
+        this._currentLine = this._lines[0];
+      }
+
+      this._input = MWeb._inputModes.lineSelect;
+      this.canvas.style.cursor = 'move';
+      this.status('Select a line.');
+    },
+
+    cleanup: function() {
+      this._lines = this._currentLine = null;
+      this._redraw();
+    },
+
     mousedown: function(e) {
       if(e.which == 1) {
         this._down = true;
       } else {
-        this._currentPoint = this._lines = this._currentLine = null;
-        this._pointSelect();
+        this._setInput('pointSelect');
       }
       this._redraw();
     },
@@ -92,9 +125,8 @@ MWeb._inputModes = {
       this._down = false;
       
       this.move(this._currentPoint.x, this._currentPoint.y, this._currentLine);
-      this._currentPoint = this._lines = this._currentLine = null;
-      this._pointSelect();
-      this._redraw();
+      this.cute();
+      this._setInput('pointSelect');
     }
 
   }
@@ -111,6 +143,32 @@ var Geo = {
 };
 
 MWeb.prototype = {
+
+  custom: function() {
+    this.reset();
+    this._setInput('pointSelect');
+  },
+
+  reset: function() {
+    this._setInput('initial');
+    this.game = null;
+    this._config = {length: 4, disjoint: 0, marks: []};
+    this._history = [];
+    this._redraw();
+  },
+
+  _setInput: function(input) {
+    var args = Array.prototype.slice.call(arguments, 0);
+    args.shift();
+
+    if(this._input && 'cleanup' in this._input) {
+      this._input.cleanup.apply(this);
+    }
+    this._input = MWeb._inputModes[input];
+    if('setup' in this._input) {
+      this._input.setup.apply(this, args);
+    }
+  },
   
   option: function(name, value) {
     if(typeof value === 'undefined') {
@@ -122,45 +180,65 @@ MWeb.prototype = {
     }
   },
 
-  init: function(rules) {
-    this.canvas = $('<canvas></canvas>').get(0);
-    this._trans = {x: 0, y: 0};
-    $(this.target).html(this.canvas);
-
-    this.game = new Morpion();
-    this.history = [];
-    this.playing = false;
-
-    this._listen();
-
-    if(rules) {
-      try {
-        this.config(rules.length, rules.disjoint);
-        if('marks' in rules) {
-          for(var i = 0; i < rules.marks.length; i++) {
-            this.play.apply(this, rules.marks[i]);
-          }
-        }
-        this.start();
-      } catch(e) {
-        console.log(e);
-        this.status('Failed to load game :(');
-      }
+  isOpen: function(x, y) {
+    if(this.game) {
+      return !this.game.isPlayed(x, y);
     } else {
-      this._pointSelect();
-      this.status('Place your marks!');
+      for(var i = 0; i < this._history.length; i++) {
+        if(this._history[i][0] == x && this._history[i][1] == y) {
+          return false;
+        }
+      }
+      return true;
     }
   },
 
-  config: function(length, disjoint) {
-    this.game.len = length;
-    this.game.dis = disjoint;
+  config: function(attr, value) {
+    if(typeof attr === 'undefined') {
+      return $.extend({}, {moves: this._history}, this._config);
+    } else if(typeof attr === 'string' && typeof value === 'undefined') {
+      return this._config[attr];
+    } else {
+      // can not change configuration while game is in progress
+      if(this.game) this.reset();
+
+      if(typeof attr == 'object') {
+        $.extend(this._config, attr);
+      } else {
+        this._config[attr] = value;
+      }
+      return this;
+    }
   },
 
-  start: function() {
-    this.playing = true;
-    this._pointSelect();
-    this.status('Game started.');
+  cute: function() {
+    var mi = Math.floor(Math.random()*this.options.messages.length);
+    this.status(this.options.messages[mi]);
+  },
+
+  start: function(rules) {
+    if(typeof rules !== 'undefined') {
+      this.config(rules);
+    }
+
+    try {
+      this.game = new Morpion(this._config.length, this._config.disjoint);
+      this._history = [];
+      for(var i = 0; i < this._config.marks.length; i++) {
+        var m = this._config.marks[i];
+        this.game.mark(m[0], m[1]);
+      }
+      if('moves' in this._config) {
+        for(var i = 0; i < this._config.moves.length; i++) {
+          this.move.apply(this, this._config.moves[i]);
+        }
+      }
+      this._setInput('pointSelect');
+      this.status('Game started.');
+    } catch(e) {
+      console.log(e);
+      this.status('Failed to load game :(');
+    }
   },
 
   _setCurrentLine: function(p) {
@@ -211,29 +289,6 @@ MWeb.prototype = {
       }
     });
     $(this.canvas).on('contextmenu', function(e) { e.preventDefault(); });
-
-    this._input = MWeb._inputModes.initial;
-  },
-
-  _pointSelect: function() {
-    this._input = MWeb._inputModes.pointSelect;
-    this.canvas.style.cursor = 'crosshair';
-  },
-
-  _lineSelect: function(point, lines, mouse) {
-    this._currentPoint = point;
-    this._lines = lines;
-    this._dragging = false;
-
-    if(mouse) {
-      this._setCurrentLine(mouse);
-    } else {
-      this._currentLine = this._lines[0];
-    }
-
-    this._input = MWeb._inputModes.lineSelect;
-    this.canvas.style.cursor = 'move';
-    this.status('Select a line.');
   },
 
   status: function(status) {
@@ -257,37 +312,25 @@ MWeb.prototype = {
     };
   },
 
-  play: function(x, y, line) {
-    if(line) {
-      this.game.markSafe(x, y, line);
-      this.history.push([x, y, line]);
-    } else {
-      this.game.mark(x, y);
-      this.history.push([x, y]);
-    }
-  },
-
   move: function(x, y, line) {
-    this.play(x, y, line);
-    var mi = Math.floor(Math.random()*this.options.messages.length);
-    this.status(this.options.messages[mi]);
+    this.game.markSafe(x, y, line);
+    this._history.push([x, y, line]);
   },
 
   undo: function() {
-    if(this.history.length > 0) {
-      var mark = this.history.pop();
-      if(!this.playing || mark[2]) {
-        this.game.unmark.apply(this.game, mark);
+    if(this.game) {
+      if(this._history.length > 0) {
+        this.game.unmark.apply(this.game, this._history.pop());
         this.status('Move undone!');
         return true;
-      } else {
-        this.history.push(mark);
-        this.status('Nothing to undo!');
-        return false;
       }
-    } else {
-      return false;
+    } else if(this._config.marks.length > 0) {
+      this._config.marks.pop();
+      return true;
     }
+
+    this.status('Nothing to undo!');
+    return false;
   },
 
   restart: function() {
@@ -296,7 +339,6 @@ MWeb.prototype = {
   },
 
   _redraw: function() {
-    if(!this.game) return;
 
     var ctx = this.canvas.getContext('2d');
 
@@ -318,7 +360,7 @@ MWeb.prototype = {
     };
     ctx.translate(this._trans.x, this._trans.y);
 
-    if(!this._lines && this.options.showValid) {
+    if(this.game && !this._lines && this.options.showValid) {
       this._drawValid(ctx);
     }
 
@@ -328,60 +370,52 @@ MWeb.prototype = {
       this._drawMark(ctx, [this._currentPoint.x, this._currentPoint.y]);
     }
 
-    // draw lines and initial marks
-    var score = 0;
-    for(var i = 0; i < this.history.length; i++) {
-      var mark = this.history[i];
+    // draw initial marks
+    for(var i = 0; i < this._config.marks.length; i++) {
+      ctx.fillStyle = '#333';
+      this._drawMark(ctx, this._config.marks[i]);
+    }
 
-      if(mark[2]) {
-        score++;
+    // draw history lines
+    if(this.game) {
+      var s;
+      for(s = 0; s < this._history.length; s++) {
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#000';
-        this._drawLine(ctx, mark[2]);
-      } else {
-        ctx.fillStyle = '#333';
-        this._drawMark(ctx, mark);
+        this._drawLine(ctx, this._history[s][2]);
+      }
+      if(this.options.score) {
+        $(this.options.score).text(s);
       }
     }
 
-    this._drawMarkers(ctx);
+    // draw history marks
+    for(var i = 0; i < this._history.length; i++) {
+      if(this.options.showNumbers) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '10px sans';
+      }
+
+      ctx.fillStyle = '#000';
+      this._drawMark(ctx, this._history[i], this.options.showNumbers ? i+1 : null);
+    }
 
     if(this._lines) {
       this._drawLines(ctx);
     }
 
-    if(this.options.score) {
-      $(this.options.score).text(score);
-    }
   },
 
   _drawValid: function(ctx) {
     ctx.fillStyle = '#CCC';
     ctx.strokeStyle = "#CCC";
     ctx.lineWidth = 1;
+
     var v = this.game.validMoves();
     for(var i = 0; i < v.length; i++) {
       this._drawMark(ctx, v[i]);
       this._drawLine(ctx, v[i][2]);
-    }
-  },
-
-  _drawMarkers: function(ctx) {
-    var num = 1;
-    for(var i = 0; i < this.history.length; i++) {
-      var mark = this.history[i], showNum = null;
-
-      if(mark[2]) {
-        if(this.options.showNumbers) {
-          showNum = num++;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.font = '10px sans';
-        }
-
-        ctx.fillStyle = '#000';
-        this._drawMark(ctx, mark, showNum);
-      }
     }
   },
 
@@ -433,18 +467,16 @@ MWeb.prototype = {
   },
 
   _bounds: function() {
-    if(this.history.length > 0) {
-      var b = null;
-      for(var i = 0; i < this.history.length; i++) {
-        var m = this.history[i];
-        if(b) {
-          if(m[0] < b.xMin) b.xMin = m[0];
-          if(m[0] > b.xMax) b.xMax = m[0];
-          if(m[1] < b.yMin) b.yMin = m[1];
-          if(m[1] > b.yMax) b.yMax = m[1];
-        } else {
-          b = {xMin: m[0], xMax: m[0], yMin: m[1], yMax: m[1]};
-        }
+    var marks = this._config.marks.concat(this._history);
+
+    if(marks.length > 0) {
+      var b = {xMin: marks[0][0], xMax: marks[0][0], yMin: marks[0][1], yMax: marks[0][1]};
+      for(var i = 1; i < marks.length; i++) {
+        var m = marks[i];
+        if(m[0] < b.xMin) b.xMin = m[0];
+        if(m[0] > b.xMax) b.xMax = m[0];
+        if(m[1] < b.yMin) b.yMin = m[1];
+        if(m[1] > b.yMax) b.yMax = m[1];
       }
       return b;
     } else {
@@ -453,46 +485,24 @@ MWeb.prototype = {
   },
 
   progress: function() {
-    if(this.playing) {
-      for(var i = 0; i < this.history.length; i++) {
-        if(this.history[i][2]) {
-          return true;
-        }
-      }
-    }
-    return false;
-  },
-
-  import: function(data) {
-    data = data.split(';');
-    var meta = data.shift().split(':');
-    var marks = data.map(function(m) {
-      m = m.split(',').map(function(i) { return parseInt(i); });
-      var mark = [m.shift(), m.shift()];
-      if(m.length > 0) mark.push(m);
-      return mark;
-    });
-
-    this.init(blah = {length: parseInt(meta[0]), disjoint: parseInt(meta[1]), marks: marks});
-    console.log(JSON.stringify(blah));
-  },
-
-  export: function() {
-    return this.game.len+':'+this.game.dis+';'+this.history.join(';');
+    return this._history.length > 0;
   }
 
 };
 
 function playUI() {
-  $('#options_play, #score').show();
-  $('#options_design').hide();
-  customUI($('#variant_value').val() == 'custom', true);
+  $('.design_ui').hide();
+  $('.play_ui').show();
+  $('.custom_ui').toggle($('#variant_value').val() == 'custom');
+  customEnabled(false);
 }
 
 function designUI() {
+  $('.play_ui').hide();
+  $('.design_ui, .custom_ui').show();
   $('#options_design').show();
   $('#options_play, #score').hide();
-  customUI(true, false);
+  customEnabled(true);
 }
 
 function setInfo(desc, link) {
@@ -506,20 +516,15 @@ function setInfo(desc, link) {
   }
 }
 
-function customUI(show, disabled) {
-  var cr = $('#custom_rules');
-  if(show) {
-    cr.show()
-    $('#length_value, #disjoint_value').prop('disabled', disabled);
-  } else {
-    cr.hide();
-  }
+function customEnabled(enabled) {
+  $('.custom_ui').filter('input, textarea, select, button').prop('disabled', !enabled);
 }
 
-function setCustom(length, disjoint) {
-  $('#variant_value').val('custom').click();
-  $('#length_value').val(length);
-  $('#disjoint_value').val(disjoint);
+function populate(config) {
+  $('.custom_config').each(function() {
+    $(this).val(config[this.name]);
+  });
+  setInfo(config.desc, config.link);
 }
 
 $(function() {
@@ -536,7 +541,7 @@ $(function() {
     ui.option(this.name, this.checked);
   }).change();
 
-  $('#variant_value').click(function() { $('option:selected', this).addClass('last_selected'); });
+  $('#variant_value').click(function() { $('option:selected', this).addClass('last_selected'); }).click();
   $('#variant_value').change(function() {
     if(!confirmAbandon()) {
       $('.last_selected', this).removeClass('last_selected').prop('selected', true);
@@ -545,12 +550,12 @@ $(function() {
 
     var variant = $(this).val();
     if(variant == "custom") {
-      ui.init();
+      ui.custom();
+      populate(ui.config());
       designUI();
-      setInfo("This one's up to you! Place your starting marks where you want them, then click Start to begin playing.");
     } else {
       $.getJSON('games/'+variant+'.json', function(rules) {
-        ui.init(rules);
+        ui.start(rules);
         playUI();
         setInfo(rules.desc, rules.link);
       });
@@ -560,8 +565,8 @@ $(function() {
   $('.load_game').click(function() {
     if(!confirmAbandon()) return;
     $.getJSON('games/'+this.value+'.json', function(rules) {
-      ui.init(rules);
-      setCustom(rules.length, rules.disjoint);
+      ui.start(rules);
+      populate(rules);
       playUI();
       ui.status('Game loaded.');
       setInfo(rules.desc, rules.link);
@@ -579,18 +584,31 @@ $(function() {
 
   $('#import').click(function() {
     if(!confirmAbandon()) return;
-    ui.import($('#serial_data').val());
-    setCustom(ui.game.len, ui.game.dis);
-    playUI();
-    setInfo('This is an imported game.');
+
+    try {
+      var cfg = JSON.parse($('#import_data').val());
+      ui.start(cfg);
+      $('#variant_value').val('custom');
+      populate(cfg);
+      playUI();
+    } catch(e) {
+      console.log(e);
+      ui.status("Failed to import game!");
+    }
   });
 
   $('#export').click(function() {
-    $('#serial_data').val(ui.export());
+    $('#export_data').val(JSON.stringify(ui.config())).select();
+  });
+
+  $('.custom_config').change(function() {
+    var val = $(this).hasClass('int') ? parseInt($(this).val()) : $(this).val();
+    ui.config(this.name, val);
   });
 
   $('#start').click(function() {
-    ui.start($('#length_value').val(), $('#disjoint_value').val());
+    ui.start();
+    populate(ui.config());
     playUI();
   });
 });
