@@ -523,6 +523,7 @@ function customEnabled(enabled) {
 }
 
 function populate(config) {
+  $('#variant_value').val('custom');
   $('.custom_config').each(function() {
     $(this).val(config[this.name]);
   });
@@ -571,7 +572,6 @@ $(function() {
       populate(rules);
       playUI();
       ui.status('Game loaded.');
-      setInfo(rules.desc, rules.link);
     });
   });
 
@@ -590,7 +590,6 @@ $(function() {
     try {
       var cfg = JSON.parse($('#import_data').val());
       ui.start(cfg);
-      $('#variant_value').val('custom');
       populate(cfg);
       playUI();
     } catch(e) {
