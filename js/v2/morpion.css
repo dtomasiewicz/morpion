@@ -9,8 +9,11 @@ body {
 	padding: 45px 15px 15px 15px;
 	font: 0.8em/1.35em verdana, sans-serif;
 }
-h1, h2, p, #morpion, #meta {
+h1, h2, p, #morpion {
 	margin: 15px 0;
+}
+h3 {
+	margin-top: 30px;
 }
 ul {
 	margin: 15px 35px;
@@ -50,14 +53,8 @@ button, input, select {
 	text-align: right;
 	width: 175px;
 }
-#meta div {
-	margin-bottom: 100px;
-}
 #extra {
 	max-width: 450px;
-}
-#meta div {
-	margin-bottom: 25px;
 }
 #score_value {
 	font-size: 2em;
@@ -66,9 +63,6 @@ button, input, select {
 textarea, input[type=text] {
 	padding: 3px;
 	border: 1px solid #333;
-}
-#import_export {
-	margin-top: 40px;
 }
 #export_data, #import_data {
 	width: 75px;
